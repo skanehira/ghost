@@ -1,0 +1,30 @@
+name: Security audit
+
+on:
+  schedule:
+    - cron: "0 0 */3 * *"
+
+  push:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+
+jobs:
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Run audit
+        run: cargo audit
