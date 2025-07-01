@@ -321,7 +321,7 @@ pub fn cleanup_old_tasks(conn: &Connection, days: u64) -> Result<usize> {
         - (days * 24 * 60 * 60) as i64;
 
     let rows_affected = conn.execute(
-        "DELETE FROM tasks WHERE status IN ('exited', 'killed') AND finished_at < ?1",
+        "DELETE FROM tasks WHERE status IN ('exited', 'killed') AND finished_at IS NOT NULL AND finished_at < ?1",
         [cutoff_time],
     )?;
 
@@ -359,7 +359,7 @@ pub fn get_cleanup_candidates(
             .as_secs() as i64
             - (days * 24 * 60 * 60) as i64;
 
-        sql.push_str(" AND finished_at < ?");
+        sql.push_str(" AND finished_at IS NOT NULL AND finished_at < ?");
         params.push(Box::new(cutoff_time));
     }
 
@@ -409,7 +409,7 @@ pub fn cleanup_tasks_by_criteria(
             .as_secs() as i64
             - (days * 24 * 60 * 60) as i64;
 
-        sql.push_str(" AND finished_at < ?");
+        sql.push_str(" AND finished_at IS NOT NULL AND finished_at < ?");
         params.push(Box::new(cutoff_time));
     }
 
