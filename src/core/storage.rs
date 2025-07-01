@@ -30,7 +30,7 @@ impl TaskStatus {
             TaskStatus::Unknown => "unknown",
         }
     }
-    
+
     /// Parse TaskStatus from string (for database retrieval)
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> TaskStatus {
@@ -40,7 +40,7 @@ impl TaskStatus {
 
 impl std::str::FromStr for TaskStatus {
     type Err = String;
-    
+
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "running" => Ok(TaskStatus::Running),
@@ -288,7 +288,12 @@ pub fn update_task_status(
 
     conn.execute(
         "UPDATE tasks SET status = ?1, exit_code = ?2, finished_at = ?3 WHERE id = ?4",
-        (status.as_str(), exit_code.map(|c| c as i64), finished_at, task_id),
+        (
+            status.as_str(),
+            exit_code.map(|c| c as i64),
+            finished_at,
+            task_id,
+        ),
     )?;
 
     Ok(finished_at)
@@ -518,7 +523,8 @@ mod tests {
         assert_eq!(tasks.len(), 2);
         for task in &tasks {
             assert_eq!(
-                task.status, TaskStatus::Exited,
+                task.status,
+                TaskStatus::Exited,
                 "Task {} should be marked as exited",
                 task.id
             );

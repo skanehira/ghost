@@ -232,7 +232,11 @@ fn cmd_stop(task_id: &str, force: bool) -> Result<(), Box<dyn std::error::Error>
     command::kill_process(task.pid, force)?;
 
     // Update status in database
-    let status = if force { storage::TaskStatus::Killed } else { storage::TaskStatus::Exited };
+    let status = if force {
+        storage::TaskStatus::Killed
+    } else {
+        storage::TaskStatus::Exited
+    };
     storage::update_task_status(&conn, task_id, status, None)?;
 
     println!("Process {} ({}) has been {}", task_id, task.pid, status);
