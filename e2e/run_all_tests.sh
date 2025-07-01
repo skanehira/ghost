@@ -85,7 +85,7 @@ main() {
     local current_test=0
     
     for test_file in "${test_files[@]}"; do
-        ((current_test++))
+        current_test=$((current_test + 1))
         log "[$current_test/$total_tests] Testing $(basename "$test_file")"
         echo "----------------------------------------"
         

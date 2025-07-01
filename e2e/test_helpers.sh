@@ -13,12 +13,12 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration paths
-GHOST_BIN="./target/release/ghost"
+GHOST_BIN="${GHOST_BINARY:-./target/release/ghost}"
 TEST_SCRIPT="./scripts/hello_loop.sh"
 MULTILINE_TEST_SCRIPT="./scripts/multiline_test.sh"
 
 # Ensure we're in the correct directory (project root)
-if [[ ! -f "$GHOST_BIN" && ! -f "Cargo.toml" ]]; then
+if [[ ! -f "$GHOST_BIN" && ! -f "./target/release/ghost" && ! -f "Cargo.toml" ]]; then
     echo "Error: Must be run from project root directory" >&2
     exit 1
 fi
