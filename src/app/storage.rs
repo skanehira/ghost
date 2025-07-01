@@ -384,36 +384,34 @@ pub fn cleanup_tasks_by_criteria(
     days: Option<u64>,
     status_filter: &[TaskStatus],
 ) -> Result<usize> {
-    let mut sql = "DELETE FROM tasks WHERE 1=1".to_string();
-    let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
+    // First, get the tasks that will be deleted (to access log files)
+    let tasks_to_delete = get_cleanup_candidates(conn, days, status_filter)?;
 
-    // Add status filter
-    if !status_filter.is_empty() {
-        let status_placeholders = status_filter
-            .iter()
-            .map(|_| "?")
-            .collect::<Vec<_>>()
-            .join(",");
-        sql.push_str(&format!(" AND status IN ({status_placeholders})"));
+    if tasks_to_delete.is_empty() {
+        return Ok(0);
+    }
 
-        for status in status_filter {
-            params.push(Box::new(status.as_str()));
+    // Delete log files first
+    for task in &tasks_to_delete {
+        if std::path::Path::new(&task.log_path).exists() {
+            if let Err(e) = std::fs::remove_file(&task.log_path) {
+                eprintln!(
+                    "Warning: Failed to delete log file {}: {}",
+                    task.log_path, e
+                );
+            }
         }
     }
 
-    // Add time filter if specified
-    if let Some(days) = days {
-        let cutoff_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64
-            - (days * 24 * 60 * 60) as i64;
+    // Then delete from database using task IDs
+    let task_ids: Vec<_> = tasks_to_delete.iter().map(|t| &t.id).collect();
+    let placeholders = task_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let sql = format!("DELETE FROM tasks WHERE id IN ({placeholders})");
 
-        sql.push_str(" AND finished_at IS NOT NULL AND finished_at < ?");
-        params.push(Box::new(cutoff_time));
-    }
-
-    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let param_refs: Vec<&dyn rusqlite::ToSql> = task_ids
+        .iter()
+        .map(|id| *id as &dyn rusqlite::ToSql)
+        .collect();
     let rows_affected = conn.execute(&sql, &param_refs[..])?;
 
     Ok(rows_affected)
