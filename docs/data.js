@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751402295179,
+  "lastUpdate": 1751403449777,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -89,6 +89,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.17",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1cff347820109f00d53ed90edbd085464b31828",
+          "message": "feat: add log file deletion to cleanup functionality (#3)\n\n- Implement log file deletion when tasks are cleaned up via `ghost cleanup`\n- Add E2E test to verify log files are deleted during cleanup\n- Refactor cleanup_tasks_by_criteria to use task IDs for more efficient deletion\n- Remove unnecessary follow flag test from log command E2E test\n- Fix clippy warning for uninlined format args\n\nFollowing TDD approach (Red → Green → Refactor):\n- Red: Added failing test for log file deletion\n- Green: Implemented minimal functionality to pass test\n- Refactor: Improved code efficiency and maintainability",
+          "timestamp": "2025-07-02T05:56:13+09:00",
+          "tree_id": "4916360f874e628e8114e1c2fa8efab8c2190aec",
+          "url": "https://github.com/skanehira/ghost/commit/c1cff347820109f00d53ed90edbd085464b31828"
+        },
+        "date": 1751403448831,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.09",
             "unit": "ns/iter"
           }
         ]
