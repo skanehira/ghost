@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use rusqlite::{Connection, Result as SqliteResult, Row};
 use serde::{Deserialize, Serialize};
 
-use crate::app::process::{self, ProcessError};
+use crate::app::{process::ProcessError, process_state};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskStatus {
@@ -303,12 +303,10 @@ pub fn update_task_status(
 pub fn update_task_status_by_process_check(conn: &Connection, task_id: &str) -> Result<Task> {
     let mut task = get_task(conn, task_id)?;
 
-    // Only check if task is marked as running
-    if task.status == TaskStatus::Running && !process::exists(task.pid) {
-        // Process no longer exists
-        let finished_at = update_task_status(conn, task_id, TaskStatus::Exited, None)?;
-        task.status = TaskStatus::Exited;
-        task.finished_at = finished_at;
+    // Use process_state module to check and update status
+    if process_state::update_task_status_if_needed(&mut task) {
+        // Status was updated, persist to database
+        update_task_status(conn, task_id, task.status, None)?;
     }
 
     Ok(task)

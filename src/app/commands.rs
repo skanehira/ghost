@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::app::{display, error::Result, process, storage};
+use crate::app::{display, error::Result, process, process_state, storage};
 
 /// Run a command in the background
 pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
@@ -104,11 +104,7 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
     process::kill(task.pid, force)?;
 
     // Update status in database
-    let status = if force {
-        storage::TaskStatus::Killed
-    } else {
-        storage::TaskStatus::Exited
-    };
+    let status = process_state::determine_status_after_kill(force);
     storage::update_task_status(&conn, task_id, status, None)?;
 
     println!("Process {} ({}) has been {}", task_id, task.pid, status);
