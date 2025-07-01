@@ -1,25 +1,42 @@
 use std::path::PathBuf;
 
-use crate::app::{config, display, error::Result, process, process_state, storage};
+use crate::app::{config, display, error::Result, helpers, process, process_state, storage};
+use rusqlite::Connection;
 
 /// Run a command in the background
 pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
+    validate_command(&command)?;
+    let env_vars = prepare_environment(&env)?;
+    let conn = helpers::init_db_connection()?;
+    let (process_info, child) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
+    finalize_process_launch(process_info, child);
+    Ok(())
+}
+
+/// Validate the command input
+fn validate_command(command: &[String]) -> Result<()> {
     if command.is_empty() {
         return Err("No command specified".into());
     }
+    Ok(())
+}
 
-    // Parse environment variables
-    let env_vars = config::env::parse_env_vars(&env)?;
+/// Prepare and parse environment variables
+fn prepare_environment(env: &[String]) -> Result<Vec<(String, String)>> {
+    config::env::parse_env_vars(env)
+}
 
-    // Initialize database
-    let conn = storage::init_database()?;
-
-    // Spawn the process
+/// Spawn process and register it in the database
+fn spawn_and_register_process(
+    command: Vec<String>,
+    cwd: Option<PathBuf>,
+    env_vars: Vec<(String, String)>,
+    conn: &Connection,
+) -> Result<(process::ProcessInfo, std::process::Child)> {
     let (process_info, child) = process::spawn_background_process(command.clone(), None)?;
 
-    // Insert into database
     storage::insert_task(
-        &conn,
+        conn,
         &process_info.id,
         process_info.pid,
         #[cfg(unix)]
@@ -36,17 +53,18 @@ pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Resu
         &process_info.log_path,
     )?;
 
+    Ok((process_info, child))
+}
+
+/// Finalize the process launch with notification and cleanup
+fn finalize_process_launch(process_info: process::ProcessInfo, child: std::process::Child) {
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
-
-    // Drop child to avoid zombie (we're not waiting)
     std::mem::drop(child);
-
-    Ok(())
 }
 
 /// List all background processes
 pub fn list(status_filter: Option<String>) -> Result<()> {
-    let conn = storage::init_database()?;
+    let conn = helpers::init_db_connection()?;
     let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref())?;
     display::print_task_list(&tasks);
 
@@ -55,28 +73,20 @@ pub fn list(status_filter: Option<String>) -> Result<()> {
 
 /// Show logs for a process
 pub fn log(task_id: &str, follow: bool) -> Result<()> {
-    let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
+    let conn = helpers::init_db_connection()?;
+    let task = helpers::get_task_by_id(&conn, task_id)?;
 
     let log_path = PathBuf::from(&task.log_path);
-    if !log_path.exists() {
-        return Err(format!("Log file not found: {}", task.log_path).into());
-    }
+    let content = helpers::read_file_content(&log_path)?;
 
     if follow {
-        // Simple follow implementation (could be improved)
         display::print_log_follow_header(task_id, &task.log_path);
-
-        // For now, just read the current content
-        // A real implementation would use inotify or similar
-        let content = std::fs::read_to_string(&log_path)?;
-        print!("{content}");
+        helpers::print_file_content(&content);
 
         // TODO: Implement proper follow functionality
         println!("\n[Follow mode not fully implemented yet]");
     } else {
-        let content = std::fs::read_to_string(&log_path)?;
-        print!("{content}");
+        helpers::print_file_content(&content);
     }
 
     Ok(())
@@ -84,12 +94,10 @@ pub fn log(task_id: &str, follow: bool) -> Result<()> {
 
 /// Stop a background process
 pub fn stop(task_id: &str, force: bool) -> Result<()> {
-    let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
+    let conn = helpers::init_db_connection()?;
+    let task = helpers::get_task_by_id(&conn, task_id)?;
 
-    if task.status != storage::TaskStatus::Running {
-        return Err(format!("Task {} is not running (status: {})", task_id, task.status).into());
-    }
+    helpers::validate_task_running(&task)?;
 
     // Kill the process
     process::kill(task.pid, force)?;
@@ -105,10 +113,10 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
 
 /// Check status of a background process
 pub fn status(task_id: &str) -> Result<()> {
-    let conn = storage::init_database()?;
+    let conn = helpers::init_db_connection()?;
 
     // This will update the status if the process is no longer running
-    let task = storage::update_task_status_by_process_check(&conn, task_id)?;
+    let task = helpers::get_task_with_status_update(&conn, task_id)?;
     display::print_task_details(&task);
 
     Ok(())
