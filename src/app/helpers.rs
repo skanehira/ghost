@@ -1,7 +1,8 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::time::Duration;
+use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
+use tokio::sync::mpsc;
 
 use crate::app::{error::Result, storage};
 
@@ -24,54 +25,77 @@ pub fn validate_task_running(task: &storage::Task) -> Result<()> {
 }
 
 /// Follow a log file and print new lines as they appear (tail -f behavior)
-pub fn follow_log_file(file_path: &PathBuf) -> Result<()> {
-    if !file_path.exists() {
+pub async fn follow_log_file(file_path: &PathBuf) -> Result<()> {
+    use notify::{Config, PollWatcher, RecursiveMode, Watcher};
+    use std::io::SeekFrom;
+
+    if !tokio::fs::try_exists(file_path).await? {
         return Err(format!("File not found: {}", file_path.display()).into());
     }
 
-    let file = File::open(file_path)?;
-    let mut reader = BufReader::new(file);
+    // Read and print existing content first
+    let mut file = File::open(file_path).await?;
+    let mut reader = BufReader::new(&mut file);
     let mut line = String::new();
 
-    // First, read and print existing content
-    loop {
+    while reader.read_line(&mut line).await? > 0 {
+        print!("{line}");
         line.clear();
-        match reader.read_line(&mut line) {
-            Ok(0) => break, // EOF reached
-            Ok(_) => {
-                print!("{line}");
-                use std::io::Write;
-                std::io::stdout().flush().unwrap_or(());
-            }
-            Err(e) => return Err(e.into()),
-        }
     }
 
-    // Now follow the file for new content
+    // Get current file position
+    let mut last_position = file.stream_position().await?;
+
+    // Set up file system watcher
+    let (tx, mut rx) = mpsc::channel(100);
+    let mut watcher = PollWatcher::new(
+        move |res: notify::Result<notify::Event>| {
+            if let Ok(event) = res {
+                let _ = tx.blocking_send(event);
+            }
+        },
+        Config::default().with_poll_interval(Duration::from_millis(200)),
+    )
+    .map_err(|e| format!("Failed to create file watcher: {e}"))?;
+
+    // Watch the file for changes
+    watcher
+        .watch(file_path, RecursiveMode::NonRecursive)
+        .map_err(|e| format!("Failed to watch file: {e}"))?;
+
+    // Main event loop
     loop {
-        line.clear();
-        match reader.read_line(&mut line) {
-            Ok(0) => {
-                // EOF reached, wait and try again
-                std::thread::sleep(Duration::from_millis(100));
+        tokio::select! {
+            Some(event) = rx.recv() => {
+                // File was modified, read new content
+                if event.kind.is_modify() {
+                    let metadata = tokio::fs::metadata(file_path).await?;
+                    let current_size = metadata.len();
 
-                // Re-seek to current position to check for new data
-                let current_pos = reader.stream_position()?;
-                let file = File::open(file_path)?;
-                reader = BufReader::new(file);
-                reader.seek(SeekFrom::Start(current_pos))?;
+                    if current_size > last_position {
+                        // File has grown, read new lines
+                        let mut file = File::open(file_path).await?;
+                        file.seek(SeekFrom::Start(last_position)).await?;
+                        let mut reader = BufReader::new(file);
+                        let mut line = String::new();
+
+                        while reader.read_line(&mut line).await? > 0 {
+                            print!("{line}");
+                            use std::io::Write;
+                            std::io::stdout().flush().unwrap_or(());
+                            line.clear();
+                        }
+
+                        last_position = current_size;
+                    }
+                }
             }
-            Ok(_) => {
-                print!("{line}");
-                // Flush stdout to ensure immediate output
-                use std::io::Write;
-                std::io::stdout().flush().unwrap_or(());
+            _ = tokio::signal::ctrl_c() => {
+                // Ctrl+C was pressed, break the loop
+                println!("\nLog following stopped.");
+                break;
             }
-            Err(e) => return Err(e.into()),
         }
-
-        // Check for Ctrl+C or process termination
-        // Note: In a real implementation, we'd want proper signal handling
-        // For now, we'll rely on the parent process to kill us
     }
+    Ok(())
 }

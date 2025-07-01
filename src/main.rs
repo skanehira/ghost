@@ -87,7 +87,8 @@ enum Commands {
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     if cfg!(windows) {
         eprintln!("ghost does not support Windows yet.");
         std::process::exit(1);
@@ -98,7 +99,7 @@ fn main() {
     let result = match cli.command {
         Commands::Run { command, cwd, env } => commands::spawn(command, cwd, env),
         Commands::List { status } => commands::list(status),
-        Commands::Log { task_id, follow } => commands::log(&task_id, follow),
+        Commands::Log { task_id, follow } => commands::log(&task_id, follow).await,
         Commands::Stop { task_id, force } => commands::stop(&task_id, force),
         Commands::Status { task_id } => commands::status(&task_id),
         Commands::Kill { pid } => commands::kill(pid),

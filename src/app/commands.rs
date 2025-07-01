@@ -62,7 +62,7 @@ pub fn list(status_filter: Option<String>) -> Result<()> {
 }
 
 /// Show logs for a process
-pub fn log(task_id: &str, follow: bool) -> Result<()> {
+pub async fn log(task_id: &str, follow: bool) -> Result<()> {
     let conn = storage::init_database()?;
     let task = storage::get_task(&conn, task_id)?;
 
@@ -71,8 +71,7 @@ pub fn log(task_id: &str, follow: bool) -> Result<()> {
 
     if follow {
         display::print_log_follow_header(task_id, &task.log_path);
-        // Use the new follow functionality
-        helpers::follow_log_file(&log_path)?;
+        helpers::follow_log_file(&log_path).await?;
     } else {
         print!("{content}");
     }
