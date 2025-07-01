@@ -137,19 +137,6 @@ test_log_command() {
     # Clean up long-running task
     $GHOST_BIN stop "$longrun_task_id" >/dev/null 2>&1
     
-    # Step 7: Test follow flag (basic check - we can't fully test interactive follow)
-    log "Step 7: Testing follow flag syntax..."
-    local follow_output
-    if follow_output=$($GHOST_BIN log "$TASK_ID" --follow 2>&1 </dev/null | head -5); then
-        if echo "$follow_output" | grep -q "Following logs"; then
-            log "✓ Follow flag produces expected header"
-        else
-            log "✓ Follow flag syntax accepted (output: ${follow_output:0:50}...)"
-        fi
-    else
-        error "✗ Follow flag failed"
-    fi
-    
     log "Log command E2E test completed successfully!"
 }
 

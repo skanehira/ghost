@@ -41,7 +41,7 @@ pub fn print_task_details(task: &Task) {
     println!("Command: {}", format_command_full(&task.command));
 
     if let Some(ref cwd) = task.cwd {
-        println!("Working directory: {}", cwd);
+        println!("Working directory: {cwd}");
     }
 
     println!(

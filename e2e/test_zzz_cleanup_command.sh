@@ -17,9 +17,11 @@ declare -a FINISHED_TASK_IDS=()
 cleanup() {
     echo -e "${YELLOW}Cleaning up...${NC}"
     # Kill any remaining test processes
-    for task_id in "${TASK_IDS[@]}"; do
-        $GHOST_BIN stop "$task_id" 2>/dev/null || true
-    done
+    if [[ ${#TASK_IDS[@]} -gt 0 ]]; then
+        for task_id in "${TASK_IDS[@]}"; do
+            $GHOST_BIN stop "$task_id" 2>/dev/null || true
+        done
+    fi
     # Clean up log file
     rm -f "$LOG_FILE"
 }
@@ -96,8 +98,8 @@ test_cleanup_command() {
     
     # Create exited tasks (use short sleep to ensure they finish properly)
     local exited_task1_output exited_task2_output
-    exited_task1_output=$($GHOST_BIN run sh -c "echo 'test exited task 1'; sleep 0.5")
-    exited_task2_output=$($GHOST_BIN run sh -c "echo 'test exited task 2'; sleep 0.5")
+    exited_task1_output=$($GHOST_BIN run -- sh -c "echo 'test exited task 1'; sleep 0.5")
+    exited_task2_output=$($GHOST_BIN run -- sh -c "echo 'test exited task 2'; sleep 0.5")
     
     local exited_task1_id exited_task2_id
     exited_task1_id=$(extract_task_id "$exited_task1_output")
@@ -110,7 +112,7 @@ test_cleanup_command() {
     
     # Create a running task that we'll kill
     local killed_task_output
-    killed_task_output=$($GHOST_BIN run "$TEST_SCRIPT")
+    killed_task_output=$($GHOST_BIN run sleep 30)
     local killed_task_id
     killed_task_id=$(extract_task_id "$killed_task_output")
     
@@ -125,7 +127,7 @@ test_cleanup_command() {
     
     # Create a running task that should NOT be cleaned up
     local running_task_output
-    running_task_output=$($GHOST_BIN run "$TEST_SCRIPT")
+    running_task_output=$($GHOST_BIN run sleep 60)
     local running_task_id
     running_task_id=$(extract_task_id "$running_task_output")
     
@@ -301,6 +303,46 @@ test_cleanup_command() {
         log "✓ High days value correctly finds no tasks"
     else
         warn "High days value test gave unexpected result: $future_days_result"
+    fi
+    
+    # Step 11: Test log file deletion functionality
+    log "Step 11: Testing log file deletion with cleanup..."
+    
+    # Create a finished task to test log file deletion
+    local log_test_task_output
+    log_test_task_output=$($GHOST_BIN run -- echo "test for log deletion" 2>&1)
+    local log_test_task_id
+    log_test_task_id=$(extract_task_id "$log_test_task_output")
+    
+    # Wait for task to complete and get its log path
+    sleep 2
+    $GHOST_BIN status "$log_test_task_id" > /dev/null 2>&1 || true
+    
+    # Get the log file path from database
+    local log_task_details
+    log_task_details=$($GHOST_BIN status "$log_test_task_id" 2>&1)
+    local log_file_path
+    log_file_path=$(echo "$log_task_details" | grep "Log file:" | sed 's/Log file: //')
+    
+    log "Log file path: $log_file_path"
+    
+    # Verify log file exists before cleanup
+    if [[ -f "$log_file_path" ]]; then
+        log "✓ Log file exists before cleanup"
+    else
+        error "✗ Log file doesn't exist before cleanup: $log_file_path"
+    fi
+    
+    # Perform cleanup with --all flag to ensure this task gets deleted
+    local log_cleanup_result
+    log_cleanup_result=$($GHOST_BIN cleanup --all 2>&1)
+    log "Log cleanup result: $log_cleanup_result"
+    
+    # Check if log file was deleted
+    if [[ ! -f "$log_file_path" ]]; then
+        log "✓ Log file successfully deleted after cleanup"
+    else
+        error "✗ Log file still exists after cleanup: $log_file_path"
     fi
     
     log "Cleanup command E2E test completed successfully!"
