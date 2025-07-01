@@ -3,7 +3,7 @@
 # Test helpers and utilities for Ghost E2E tests
 
 # Exit on any error, undefined variables, and pipe failures
-set -euxo pipefail
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
