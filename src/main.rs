@@ -224,7 +224,7 @@ fn cmd_stop(task_id: &str, force: bool) -> Result<(), Box<dyn std::error::Error>
     let conn = storage::init_database()?;
     let task = storage::get_task(&conn, task_id)?;
 
-    if task.status != "running" {
+    if task.status != storage::TaskStatus::Running {
         return Err(format!("Task {} is not running (status: {})", task_id, task.status).into());
     }
 
@@ -232,7 +232,7 @@ fn cmd_stop(task_id: &str, force: bool) -> Result<(), Box<dyn std::error::Error>
     command::kill_process(task.pid, force)?;
 
     // Update status in database
-    let status = if force { "killed" } else { "exited" };
+    let status = if force { storage::TaskStatus::Killed } else { storage::TaskStatus::Exited };
     storage::update_task_status(&conn, task_id, status, None)?;
 
     println!("Process {} ({}) has been {}", task_id, task.pid, status);

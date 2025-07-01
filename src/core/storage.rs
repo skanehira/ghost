@@ -6,6 +6,52 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::command::{CommandError, process_exists};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TaskStatus {
+    Running,
+    Exited,
+    Killed,
+    Unknown,
+}
+
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl TaskStatus {
+    /// Convert TaskStatus to string for database storage
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TaskStatus::Running => "running",
+            TaskStatus::Exited => "exited",
+            TaskStatus::Killed => "killed",
+            TaskStatus::Unknown => "unknown",
+        }
+    }
+    
+    /// Parse TaskStatus from string (for database retrieval)
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> TaskStatus {
+        s.parse().unwrap_or(TaskStatus::Unknown)
+    }
+}
+
+impl std::str::FromStr for TaskStatus {
+    type Err = String;
+    
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "running" => Ok(TaskStatus::Running),
+            "exited" => Ok(TaskStatus::Exited),
+            "killed" => Ok(TaskStatus::Killed),
+            "unknown" => Ok(TaskStatus::Unknown),
+            _ => Err(format!("Unknown task status: {s}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
@@ -14,7 +60,7 @@ pub struct Task {
     pub command: String,     // JSON serialized Vec<String>
     pub env: Option<String>, // JSON serialized environment variables
     pub cwd: Option<String>,
-    pub status: String, // running, exited, killed, unknown
+    pub status: TaskStatus,
     pub exit_code: Option<i32>,
     pub started_at: i64, // Unix timestamp
     pub finished_at: Option<i64>,
@@ -161,7 +207,7 @@ pub fn get_task(conn: &Connection, task_id: &str) -> Result<Task> {
             command: row.get(3)?,
             env: row.get(4)?,
             cwd: row.get(5)?,
-            status: row.get(6)?,
+            status: TaskStatus::from_str(&row.get::<_, String>(6)?),
             exit_code: row.get::<_, Option<i64>>(7)?.map(|c| c as i32),
             started_at: row.get(8)?,
             finished_at: row.get(9)?,
@@ -210,7 +256,7 @@ pub fn get_tasks_with_process_check(
     // Check and update running tasks using existing function
     let mut updated_tasks = Vec::new();
     for task in tasks {
-        if task.status == "running" {
+        if task.status == TaskStatus::Running {
             // Use existing update_task_status_by_process_check for consistency
             let updated_task = update_task_status_by_process_check(conn, &task.id)?;
             updated_tasks.push(updated_task);
@@ -226,10 +272,10 @@ pub fn get_tasks_with_process_check(
 pub fn update_task_status(
     conn: &Connection,
     task_id: &str,
-    status: &str,
+    status: TaskStatus,
     exit_code: Option<i32>,
 ) -> Result<Option<i64>> {
-    let finished_at = if status == "exited" || status == "killed" {
+    let finished_at = if matches!(status, TaskStatus::Exited | TaskStatus::Killed) {
         Some(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -242,7 +288,7 @@ pub fn update_task_status(
 
     conn.execute(
         "UPDATE tasks SET status = ?1, exit_code = ?2, finished_at = ?3 WHERE id = ?4",
-        (status, exit_code.map(|c| c as i64), finished_at, task_id),
+        (status.as_str(), exit_code.map(|c| c as i64), finished_at, task_id),
     )?;
 
     Ok(finished_at)
@@ -253,10 +299,10 @@ pub fn update_task_status_by_process_check(conn: &Connection, task_id: &str) -> 
     let mut task = get_task(conn, task_id)?;
 
     // Only check if task is marked as running
-    if task.status == "running" && !process_exists(task.pid) {
+    if task.status == TaskStatus::Running && !process_exists(task.pid) {
         // Process no longer exists
-        let finished_at = update_task_status(conn, task_id, "exited", None)?;
-        task.status = "exited".to_string();
+        let finished_at = update_task_status(conn, task_id, TaskStatus::Exited, None)?;
+        task.status = TaskStatus::Exited;
         task.finished_at = finished_at;
     }
 
@@ -299,7 +345,7 @@ fn row_to_task(row: &Row) -> SqliteResult<Task> {
         command: row.get(3)?,
         env: row.get(4)?,
         cwd: row.get(5)?,
-        status: row.get(6)?,
+        status: TaskStatus::from_str(&row.get::<_, String>(6)?),
         exit_code: row.get::<_, Option<i64>>(7)?.map(|c| c as i32),
         started_at: row.get(8)?,
         finished_at: row.get(9)?,
@@ -361,13 +407,13 @@ mod tests {
         let task = get_task(&conn, task_id).unwrap();
         assert_eq!(task.id, task_id);
         assert_eq!(task.pid, 12345);
-        assert_eq!(task.status, "running");
+        assert_eq!(task.status, TaskStatus::Running);
 
         // Test status update
-        update_task_status(&conn, task_id, "exited", Some(0)).unwrap();
+        update_task_status(&conn, task_id, TaskStatus::Exited, Some(0)).unwrap();
 
         let updated_task = get_task(&conn, task_id).unwrap();
-        assert_eq!(updated_task.status, "exited");
+        assert_eq!(updated_task.status, TaskStatus::Exited);
         assert_eq!(updated_task.exit_code, Some(0));
         assert!(updated_task.finished_at.is_some());
     }
@@ -407,7 +453,7 @@ mod tests {
         insert_task(&conn, "task2", 200, None, &command, None, None, &log_path).unwrap();
 
         // Update one task status
-        update_task_status(&conn, "task1", "exited", Some(0)).unwrap();
+        update_task_status(&conn, "task1", TaskStatus::Exited, Some(0)).unwrap();
 
         // Test getting all tasks
         let all_tasks = get_tasks(&conn, None).unwrap();
@@ -462,8 +508,8 @@ mod tests {
         // Verify both tasks are initially 'running'
         let task1_before = get_task(&conn, "task1").unwrap();
         let task2_before = get_task(&conn, "task2").unwrap();
-        assert_eq!(task1_before.status, "running");
-        assert_eq!(task2_before.status, "running");
+        assert_eq!(task1_before.status, TaskStatus::Running);
+        assert_eq!(task2_before.status, TaskStatus::Running);
 
         // Call get_tasks_with_process_check - this should update status for non-existent processes
         let tasks = get_tasks_with_process_check(&conn, None).unwrap();
@@ -472,7 +518,7 @@ mod tests {
         assert_eq!(tasks.len(), 2);
         for task in &tasks {
             assert_eq!(
-                task.status, "exited",
+                task.status, TaskStatus::Exited,
                 "Task {} should be marked as exited",
                 task.id
             );
@@ -486,8 +532,8 @@ mod tests {
         // Double-check by querying individually
         let task1_after = get_task(&conn, "task1").unwrap();
         let task2_after = get_task(&conn, "task2").unwrap();
-        assert_eq!(task1_after.status, "exited");
-        assert_eq!(task2_after.status, "exited");
+        assert_eq!(task1_after.status, TaskStatus::Exited);
+        assert_eq!(task2_after.status, TaskStatus::Exited);
         assert!(task1_after.finished_at.is_some());
         assert!(task2_after.finished_at.is_some());
     }
