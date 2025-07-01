@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751403449777,
+  "lastUpdate": 1751404448835,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -119,6 +119,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.09",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "dfb258cab17d5980b09e300334d7501bd1981cf1",
+          "message": "refactor: remove unnecessary wrapper functions from helpers.rs\n\n- Remove simple wrapper functions that added no value:\n  - init_db_connection() → use storage::init_database() directly\n  - get_task_by_id() → use storage::get_task() directly\n  - get_task_with_status_update() → use storage::update_task_status_by_process_check() directly\n  - print_file_content() → use print\\! macro directly\n\n- Keep meaningful helper functions with actual logic:\n  - read_file_content() (file existence check and error handling)\n  - follow_log_file() (complex file monitoring implementation)\n  - validate_task_running() (task state validation logic)\n\n- Update all call sites in commands.rs to use direct function calls\n- Remove unnecessary imports from helpers.rs\n\nThis improves code clarity by removing unnecessary abstraction layers.",
+          "timestamp": "2025-07-02T06:10:52+09:00",
+          "tree_id": "91879e4f0ac1b8f2d8d381d1b20316da71697888",
+          "url": "https://github.com/skanehira/ghost/commit/dfb258cab17d5980b09e300334d7501bd1981cf1"
+        },
+        "date": 1751404447918,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.13",
             "unit": "ns/iter"
           }
         ]
