@@ -33,7 +33,8 @@ fn spawn_and_register_process(
     env_vars: Vec<(String, String)>,
     conn: &Connection,
 ) -> Result<(process::ProcessInfo, std::process::Child)> {
-    let (process_info, child) = process::spawn_background_process(command.clone(), None)?;
+    let (process_info, child) =
+        process::spawn_background_process(command.clone(), cwd.clone(), None)?;
 
     storage::insert_task(
         conn,
@@ -81,10 +82,8 @@ pub fn log(task_id: &str, follow: bool) -> Result<()> {
 
     if follow {
         display::print_log_follow_header(task_id, &task.log_path);
-        helpers::print_file_content(&content);
-
-        // TODO: Implement proper follow functionality
-        println!("\n[Follow mode not fully implemented yet]");
+        // Use the new follow functionality
+        helpers::follow_log_file(&log_path)?;
     } else {
         helpers::print_file_content(&content);
     }

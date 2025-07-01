@@ -47,6 +47,7 @@ fn get_log_dir() -> PathBuf {
 /// Returns both ProcessInfo and Child handle to allow proper cleanup
 pub fn spawn_background_process(
     command: Vec<String>,
+    cwd: Option<PathBuf>,
     log_dir: Option<PathBuf>,
 ) -> Result<(ProcessInfo, Child)> {
     if command.is_empty() {
@@ -72,6 +73,11 @@ pub fn spawn_background_process(
         .stdin(Stdio::null())
         .stdout(Stdio::from(log_file.try_clone()?))
         .stderr(Stdio::from(log_file));
+
+    // Set current working directory if specified
+    if let Some(ref cwd) = cwd {
+        cmd.current_dir(cwd);
+    }
 
     #[cfg(unix)]
     unsafe {
@@ -159,7 +165,7 @@ mod tests {
 
         // Spawn a simple sleep command
         let command = vec!["sleep".to_string(), "2".to_string()];
-        let result = spawn_background_process(command.clone(), Some(log_dir.clone()));
+        let result = spawn_background_process(command.clone(), None, Some(log_dir.clone()));
 
         assert!(result.is_ok());
         let (process_info, mut child) = result.unwrap();
@@ -198,7 +204,7 @@ mod tests {
             "echo 'Hello, Ghost!' && echo 'Error message' >&2".to_string(),
         ];
 
-        let result = spawn_background_process(command, Some(log_dir));
+        let result = spawn_background_process(command, None, Some(log_dir));
         assert!(result.is_ok());
 
         let (process_info, mut child) = result.unwrap();
@@ -210,6 +216,32 @@ mod tests {
         let log_content = std::fs::read_to_string(&process_info.log_path).unwrap();
         assert!(log_content.contains("Hello, Ghost!"));
         assert!(log_content.contains("Error message"));
+    }
+
+    #[test]
+    fn test_spawn_with_cwd() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let log_dir = temp_dir.path().to_path_buf();
+        let test_cwd = temp_dir.path().join("test_cwd");
+
+        // Create test directory and file
+        std::fs::create_dir_all(&test_cwd).unwrap();
+        let test_file = test_cwd.join("test_file.txt");
+        std::fs::write(&test_file, "test content").unwrap();
+
+        // Spawn command that reads the file in the specified cwd
+        let command = vec!["cat".to_string(), "test_file.txt".to_string()];
+        let result = spawn_background_process(command, Some(test_cwd), Some(log_dir));
+
+        assert!(result.is_ok());
+        let (process_info, mut child) = result.unwrap();
+
+        // Wait for process to complete
+        let _ = child.wait();
+
+        // Check log content to verify cwd was used
+        let log_content = std::fs::read_to_string(&process_info.log_path).unwrap();
+        assert!(log_content.contains("test content"));
     }
 
     #[test]
@@ -233,7 +265,7 @@ mod tests {
         }
 
         let command = vec![script_path.to_string_lossy().to_string()];
-        let result = spawn_background_process(command, Some(log_dir));
+        let result = spawn_background_process(command, None, Some(log_dir));
         assert!(result.is_ok());
 
         let (process_info, mut child) = result.unwrap();

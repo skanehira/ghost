@@ -39,6 +39,11 @@ pub fn print_task_details(task: &Task) {
     println!("PID: {}", task.pid);
     println!("Status: {}", task.status);
     println!("Command: {}", format_command_full(&task.command));
+
+    if let Some(ref cwd) = task.cwd {
+        println!("Working directory: {}", cwd);
+    }
+
     println!(
         "Started: {}",
         format_timestamp(task.started_at, "%Y-%m-%d %H:%M:%S")

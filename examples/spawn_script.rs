@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let command = vec!["./scripts/hello_loop.sh".to_string()];
     let (process_info, mut child) =
-        process::spawn_background_process(command, Some(log_dir.clone()))?;
+        process::spawn_background_process(command, None, Some(log_dir.clone()))?;
 
     println!(
         "Process started: ID={}, PID={}",
