@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751399547098,
+  "lastUpdate": 1751402295179,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -59,6 +59,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.94,
             "range": "± 0.45",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "9a1c6f1b1e5a08716fda1dbef53032560c54fb9c",
+          "message": "feat: implement log --follow functionality and fix cwd bug\n\n## Phase 2 Implementation (TDD approach)\n- Implement real-time log following with `ghost log --follow`\n- Replace placeholder message with functional tail -f behavior\n- Add file monitoring for incremental log updates\n\n## CWD Bug Fix (TDD approach)\n- Fix cwd parameter not being used in process execution\n- Add cwd parameter to spawn_background_process function\n- Display working directory in task status output\n- Add comprehensive E2E test for cwd functionality\n- Add unit test for cwd process spawning\n\n## Changes\n- `helpers.rs`: Add follow_log_file() for real-time log streaming\n- `commands.rs`: Use follow_log_file() instead of placeholder message\n- `process.rs`: Add cwd parameter and apply to Command::current_dir()\n- `display.rs`: Show working directory in task status\n- `examples/spawn_script.rs`: Update function signature\n\n## Testing\n- All existing E2E tests pass\n- CWD functionality fully tested with E2E coverage\n- Log follow functionality implemented (manual testing confirmed)\n\nFollows t-wada TDD cycle: Red → Green → Refactor",
+          "timestamp": "2025-07-02T05:35:03+09:00",
+          "tree_id": "a85494f2f1f570736c703e9448fa2d534c485296",
+          "url": "https://github.com/skanehira/ghost/commit/9a1c6f1b1e5a08716fda1dbef53032560c54fb9c"
+        },
+        "date": 1751402294811,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.17",
             "unit": "ns/iter"
           }
         ]
