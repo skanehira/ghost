@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751404448835,
+  "lastUpdate": 1751408364856,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -149,6 +149,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.13",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "ad67cc91114e20143f1fa3ecd5050ea10f8ba175",
+          "message": "feat: Implement async log following with Ctrl-C support\n\nRefactored the `log --follow` functionality to be fully asynchronous\nusing Tokio. This provides a more robust and responsive experience.\n\nKey changes:\n- Replaced the blocking, synchronous file reading loop with an\n  asynchronous implementation in `helpers::follow_log_file`.\n- Switched from `notify::RecommendedWatcher` to `notify::PollWatcher`\n  to ensure file changes are detected reliably across different\n  environments and file systems.\n- Introduced `tokio::select!` to concurrently handle file change\n  events and `Ctrl-C` signals, allowing the user to gracefully\n  stop the log following at any time.\n- Added the `tokio` runtime and updated the `main` function to be\n  asynchronous to support these changes.",
+          "timestamp": "2025-07-02T07:15:02+09:00",
+          "tree_id": "30b5265c2fb539d0249d9d5a0f7abc920dc1aa3c",
+          "url": "https://github.com/skanehira/ghost/commit/ad67cc91114e20143f1fa3ecd5050ea10f8ba175"
+        },
+        "date": 1751408363934,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.97,
+            "range": "± 3.05",
             "unit": "ns/iter"
           }
         ]
