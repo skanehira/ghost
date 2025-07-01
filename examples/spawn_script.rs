@@ -1,9 +1,9 @@
-use ghost::core::command::{kill_process, process_exists, spawn_background_process};
+use ghost::app::process;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
 fn print_status(pid: u32) {
-    let running = process_exists(pid);
+    let running = process::exists(pid);
 
     println!(
         "Process is currently {}",
@@ -18,26 +18,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Spawning hello_loop.sh in background...");
 
     let command = vec!["./scripts/hello_loop.sh".to_string()];
-    let (process, mut child) = spawn_background_process(command, Some(log_dir.clone()))?;
+    let (process_info, mut child) =
+        process::spawn_background_process(command, Some(log_dir.clone()))?;
 
-    println!("Process started: ID={}, PID={}", process.id, process.pid);
-    println!("Log file: {}", process.log_path.display());
+    println!(
+        "Process started: ID={}, PID={}",
+        process_info.id, process_info.pid
+    );
+    println!("Log file: {}", process_info.log_path.display());
 
-    print_status(process.pid);
+    print_status(process_info.pid);
 
     println!("\nPress Enter to kill the process...");
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
-    kill_process(process.pid, true)?;
+    process::kill(process_info.pid, true)?;
 
     // Wait to reap the zombie
     let _ = child.wait();
 
     io::stdin().read_line(&mut input)?;
 
-    print_status(process.pid);
+    print_status(process_info.pid);
 
     Ok(())
 }

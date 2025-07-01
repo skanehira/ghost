@@ -39,7 +39,8 @@ count_tasks_in_list() {
 task_in_list() {
     local task_id="$1"
     local list_output="$2"
-    echo "$list_output" | grep -q "${task_id:0:8}"
+    # Use first 5 characters to match the displayed format (e.g., "3f6db...")
+    echo "$list_output" | grep -q "${task_id:0:5}"
 }
 
 
@@ -102,9 +103,9 @@ test_list_command() {
     log "Step 4: Verifying all tasks appear in list..."
     for task_id in "${TASK_IDS[@]}"; do
         if task_in_list "$task_id" "$list_output"; then
-            log "✓ Task ${task_id:0:8} found in list"
+            log "✓ Task ${task_id:0:5} found in list"
         else
-            error "✗ Task ${task_id:0:8} not found in list"
+            error "✗ Task ${task_id:0:5} not found in list"
         fi
     done
     

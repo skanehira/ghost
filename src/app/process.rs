@@ -21,7 +21,7 @@ pub struct ProcessInfo {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CommandError {
+pub enum ProcessError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -36,17 +36,11 @@ pub enum CommandError {
     Unix(#[from] nix::Error),
 }
 
-pub type Result<T> = std::result::Result<T, CommandError>;
+pub type Result<T> = std::result::Result<T, ProcessError>;
 
 /// Get the default log directory path
 fn get_log_dir() -> PathBuf {
-    let base_dir = if cfg!(windows) {
-        dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."))
-    } else {
-        dirs::data_dir().unwrap_or_else(|| PathBuf::from("."))
-    };
-
-    base_dir.join("ghost").join("logs")
+    crate::app::config::get_log_dir()
 }
 
 /// Spawn a background process with logging
@@ -56,7 +50,7 @@ pub fn spawn_background_process(
     log_dir: Option<PathBuf>,
 ) -> Result<(ProcessInfo, Child)> {
     if command.is_empty() {
-        return Err(CommandError::SpawnFailed("Empty command".to_string()));
+        return Err(ProcessError::SpawnFailed("Empty command".to_string()));
     }
 
     // Generate task ID and prepare paths
@@ -70,7 +64,7 @@ pub fn spawn_background_process(
 
     // Create log file
     let log_file =
-        File::create(&log_path).map_err(|e| CommandError::LogFileCreation(e.to_string()))?;
+        File::create(&log_path).map_err(|e| ProcessError::LogFileCreation(e.to_string()))?;
 
     // Setup command
     let mut cmd = Command::new(&command[0]);
@@ -87,7 +81,7 @@ pub fn spawn_background_process(
     // Spawn the process
     let child = cmd
         .spawn()
-        .map_err(|e| CommandError::SpawnFailed(format!("Failed to spawn process: {e}")))?;
+        .map_err(|e| ProcessError::SpawnFailed(format!("Failed to spawn process: {e}")))?;
 
     let pid = child.id();
 
@@ -111,7 +105,7 @@ pub fn spawn_background_process(
 }
 
 /// Check if a process is still running
-pub fn process_exists(pid: u32) -> bool {
+pub fn exists(pid: u32) -> bool {
     #[cfg(unix)]
     {
         // Send signal 0 to check if process exists
@@ -125,7 +119,7 @@ pub fn process_exists(pid: u32) -> bool {
 }
 
 /// Kill a process
-pub fn kill_process(pid: u32, force: bool) -> Result<()> {
+pub fn kill(pid: u32, force: bool) -> Result<()> {
     #[cfg(unix)]
     {
         let signal = if force {
@@ -140,7 +134,7 @@ pub fn kill_process(pid: u32, force: bool) -> Result<()> {
 
 /// Kill a process group
 #[cfg(unix)]
-pub fn kill_process_group(pgid: i32, force: bool) -> Result<()> {
+pub fn kill_group(pgid: i32, force: bool) -> Result<()> {
     let signal = if force {
         Signal::SIGKILL
     } else {
@@ -179,14 +173,14 @@ mod tests {
         assert!(process_info.log_path.exists());
 
         // Check process is running
-        assert!(process_exists(process_info.pid));
+        assert!(exists(process_info.pid));
 
         // Wait a bit and check again
         thread::sleep(Duration::from_millis(100));
-        assert!(process_exists(process_info.pid));
+        assert!(exists(process_info.pid));
 
         // Kill the process
-        let _ = kill_process(process_info.pid, true);
+        let _ = kill(process_info.pid, true);
 
         // Clean up zombie by waiting
         let _ = child.wait();
@@ -246,18 +240,18 @@ mod tests {
         let pid = process_info.pid;
 
         // Verify process is running
-        assert!(process_exists(pid));
+        assert!(exists(pid));
 
         // Try to kill with SIGTERM (should not work due to trap)
-        let _ = kill_process(pid, false);
+        let _ = kill(pid, false);
         thread::sleep(Duration::from_millis(200));
 
         // Force kill with SIGKILL - this should always work
-        let kill_result = kill_process(pid, true);
+        let kill_result = kill(pid, true);
         assert!(kill_result.is_ok());
 
         // Wait to reap the zombie
         let _ = child.wait();
-        assert!(!process_exists(pid));
+        assert!(!exists(pid));
     }
 }

@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use rusqlite::{Connection, Result as SqliteResult, Row};
 use serde::{Deserialize, Serialize};
 
-use crate::core::command::{CommandError, process_exists};
+use crate::app::{process::ProcessError, process_state};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskStatus {
@@ -81,32 +81,21 @@ pub enum StorageError {
     #[error("Task not found: {0}")]
     TaskNotFound(String),
 
-    #[error("Command error: {0}")]
-    Command(#[from] CommandError),
+    #[error("Process error: {0}")]
+    Process(#[from] ProcessError),
 }
 
 pub type Result<T> = std::result::Result<T, StorageError>;
 
-/// Get the default database directory path
-fn get_db_dir() -> PathBuf {
-    let base_dir = if cfg!(windows) {
-        dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."))
-    } else {
-        dirs::data_dir().unwrap_or_else(|| PathBuf::from("."))
-    };
-
-    base_dir.join("ghost")
-}
-
 /// Get the database file path
 pub fn get_db_path() -> PathBuf {
-    get_db_dir().join("tasks.db")
+    crate::app::config::get_db_path()
 }
 
 /// Initialize the database and create tables if they don't exist
 pub fn init_database() -> Result<Connection> {
-    let db_dir = get_db_dir();
-    std::fs::create_dir_all(&db_dir)?;
+    let config = crate::app::config::Config::default();
+    config.ensure_directories()?;
 
     let db_path = get_db_path();
     let conn = Connection::open(db_path)?;
@@ -303,12 +292,10 @@ pub fn update_task_status(
 pub fn update_task_status_by_process_check(conn: &Connection, task_id: &str) -> Result<Task> {
     let mut task = get_task(conn, task_id)?;
 
-    // Only check if task is marked as running
-    if task.status == TaskStatus::Running && !process_exists(task.pid) {
-        // Process no longer exists
-        let finished_at = update_task_status(conn, task_id, TaskStatus::Exited, None)?;
-        task.status = TaskStatus::Exited;
-        task.finished_at = finished_at;
+    // Use process_state module to check and update status
+    if process_state::update_task_status_if_needed(&mut task) {
+        // Status was updated, persist to database
+        update_task_status(conn, task_id, task.status, None)?;
     }
 
     Ok(task)
@@ -334,9 +321,100 @@ pub fn cleanup_old_tasks(conn: &Connection, days: u64) -> Result<usize> {
         - (days * 24 * 60 * 60) as i64;
 
     let rows_affected = conn.execute(
-        "DELETE FROM tasks WHERE status IN ('exited', 'killed') AND finished_at < ?1",
+        "DELETE FROM tasks WHERE status IN ('exited', 'killed') AND finished_at IS NOT NULL AND finished_at < ?1",
         [cutoff_time],
     )?;
+
+    Ok(rows_affected)
+}
+
+/// Get tasks that would be cleaned up (for dry-run)
+pub fn get_cleanup_candidates(
+    conn: &Connection,
+    days: Option<u64>,
+    status_filter: &[TaskStatus],
+) -> Result<Vec<Task>> {
+    let mut sql = "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks WHERE 1=1".to_string();
+    let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
+
+    // Add status filter
+    if !status_filter.is_empty() {
+        let status_placeholders = status_filter
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        sql.push_str(&format!(" AND status IN ({status_placeholders})"));
+
+        for status in status_filter {
+            params.push(Box::new(status.as_str()));
+        }
+    }
+
+    // Add time filter if specified
+    if let Some(days) = days {
+        let cutoff_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            - (days * 24 * 60 * 60) as i64;
+
+        sql.push_str(" AND finished_at IS NOT NULL AND finished_at < ?");
+        params.push(Box::new(cutoff_time));
+    }
+
+    sql.push_str(" ORDER BY finished_at DESC");
+
+    let mut stmt = conn.prepare(&sql)?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+    let task_iter = stmt.query_map(&param_refs[..], row_to_task)?;
+
+    let mut tasks = Vec::new();
+    for task in task_iter {
+        tasks.push(task?);
+    }
+
+    Ok(tasks)
+}
+
+/// Clean up tasks with more granular control
+pub fn cleanup_tasks_by_criteria(
+    conn: &Connection,
+    days: Option<u64>,
+    status_filter: &[TaskStatus],
+) -> Result<usize> {
+    let mut sql = "DELETE FROM tasks WHERE 1=1".to_string();
+    let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
+
+    // Add status filter
+    if !status_filter.is_empty() {
+        let status_placeholders = status_filter
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        sql.push_str(&format!(" AND status IN ({status_placeholders})"));
+
+        for status in status_filter {
+            params.push(Box::new(status.as_str()));
+        }
+    }
+
+    // Add time filter if specified
+    if let Some(days) = days {
+        let cutoff_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            - (days * 24 * 60 * 60) as i64;
+
+        sql.push_str(" AND finished_at IS NOT NULL AND finished_at < ?");
+        params.push(Box::new(cutoff_time));
+    }
+
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let rows_affected = conn.execute(&sql, &param_refs[..])?;
 
     Ok(rows_affected)
 }
