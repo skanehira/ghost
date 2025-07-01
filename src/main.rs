@@ -66,6 +66,25 @@ enum Commands {
         /// Process ID to kill
         pid: u32,
     },
+
+    /// Clean up old finished tasks
+    Cleanup {
+        /// Delete tasks older than this many days (default: 30)
+        #[arg(short, long, default_value = "30")]
+        days: u64,
+
+        /// Filter by status (exited, killed, all). Default: exited,killed
+        #[arg(short, long)]
+        status: Option<String>,
+
+        /// Show what would be deleted without actually deleting
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+
+        /// Delete all finished tasks regardless of age
+        #[arg(short, long)]
+        all: bool,
+    },
 }
 
 fn main() {
@@ -83,6 +102,12 @@ fn main() {
         Commands::Stop { task_id, force } => commands::stop(&task_id, force),
         Commands::Status { task_id } => commands::status(&task_id),
         Commands::Kill { pid } => commands::kill(pid),
+        Commands::Cleanup {
+            days,
+            status,
+            dry_run,
+            all,
+        } => commands::cleanup(days, status, dry_run, all),
     };
 
     if let Err(e) = result {

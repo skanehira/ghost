@@ -328,6 +328,97 @@ pub fn cleanup_old_tasks(conn: &Connection, days: u64) -> Result<usize> {
     Ok(rows_affected)
 }
 
+/// Get tasks that would be cleaned up (for dry-run)
+pub fn get_cleanup_candidates(
+    conn: &Connection,
+    days: Option<u64>,
+    status_filter: &[TaskStatus],
+) -> Result<Vec<Task>> {
+    let mut sql = "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks WHERE 1=1".to_string();
+    let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
+
+    // Add status filter
+    if !status_filter.is_empty() {
+        let status_placeholders = status_filter
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        sql.push_str(&format!(" AND status IN ({status_placeholders})"));
+
+        for status in status_filter {
+            params.push(Box::new(status.as_str()));
+        }
+    }
+
+    // Add time filter if specified
+    if let Some(days) = days {
+        let cutoff_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            - (days * 24 * 60 * 60) as i64;
+
+        sql.push_str(" AND finished_at < ?");
+        params.push(Box::new(cutoff_time));
+    }
+
+    sql.push_str(" ORDER BY finished_at DESC");
+
+    let mut stmt = conn.prepare(&sql)?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+    let task_iter = stmt.query_map(&param_refs[..], row_to_task)?;
+
+    let mut tasks = Vec::new();
+    for task in task_iter {
+        tasks.push(task?);
+    }
+
+    Ok(tasks)
+}
+
+/// Clean up tasks with more granular control
+pub fn cleanup_tasks_by_criteria(
+    conn: &Connection,
+    days: Option<u64>,
+    status_filter: &[TaskStatus],
+) -> Result<usize> {
+    let mut sql = "DELETE FROM tasks WHERE 1=1".to_string();
+    let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
+
+    // Add status filter
+    if !status_filter.is_empty() {
+        let status_placeholders = status_filter
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        sql.push_str(&format!(" AND status IN ({status_placeholders})"));
+
+        for status in status_filter {
+            params.push(Box::new(status.as_str()));
+        }
+    }
+
+    // Add time filter if specified
+    if let Some(days) = days {
+        let cutoff_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            - (days * 24 * 60 * 60) as i64;
+
+        sql.push_str(" AND finished_at < ?");
+        params.push(Box::new(cutoff_time));
+    }
+
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let rows_affected = conn.execute(&sql, &param_refs[..])?;
+
+    Ok(rows_affected)
+}
+
 /// Helper function to convert a row to a Task
 fn row_to_task(row: &Row) -> SqliteResult<Task> {
     Ok(Task {

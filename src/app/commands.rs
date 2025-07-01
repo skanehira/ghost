@@ -128,3 +128,106 @@ pub fn kill(pid: u32) -> Result<()> {
     println!("Process {pid} killed successfully.");
     Ok(())
 }
+
+/// Clean up old finished tasks
+pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> Result<()> {
+    let conn = helpers::init_db_connection()?;
+
+    // Parse status filter
+    let status_filter = parse_status_filter(status.as_deref())?;
+
+    // Determine days filter - None if --all is specified
+    let days_filter = if all { None } else { Some(days) };
+
+    if dry_run {
+        // Show what would be deleted
+        let candidates = storage::get_cleanup_candidates(&conn, days_filter, &status_filter)?;
+
+        if candidates.is_empty() {
+            println!("No tasks found matching cleanup criteria.");
+            return Ok(());
+        }
+
+        println!(
+            "The following {} task(s) would be deleted:",
+            candidates.len()
+        );
+        display::print_task_list(&candidates);
+
+        if all {
+            println!(
+                "\nNote: --all flag specified, all finished tasks would be deleted regardless of age."
+            );
+        } else {
+            println!("\nNote: Only tasks older than {days} days would be deleted.");
+        }
+    } else {
+        // Actually delete tasks
+        let deleted_count = storage::cleanup_tasks_by_criteria(&conn, days_filter, &status_filter)?;
+
+        if deleted_count == 0 {
+            println!("No tasks found matching cleanup criteria.");
+        } else {
+            println!("Successfully deleted {deleted_count} task(s).");
+
+            if all {
+                println!("Deleted all finished tasks regardless of age.");
+            } else {
+                println!(
+                    "Deleted tasks older than {} days with status: {}.",
+                    days,
+                    format_status_list(&status_filter)
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Parse status filter string into TaskStatus enum list
+fn parse_status_filter(status: Option<&str>) -> Result<Vec<storage::TaskStatus>> {
+    match status {
+        Some("all") => {
+            // All statuses except running (don't delete running tasks)
+            Ok(vec![
+                storage::TaskStatus::Exited,
+                storage::TaskStatus::Killed,
+                storage::TaskStatus::Unknown,
+            ])
+        }
+        Some(status_str) => {
+            let statuses: Result<Vec<_>> = status_str
+                .split(',')
+                .map(|s| s.trim())
+                .map(|s| match s {
+                    "exited" => Ok(storage::TaskStatus::Exited),
+                    "killed" => Ok(storage::TaskStatus::Killed),
+                    "unknown" => Ok(storage::TaskStatus::Unknown),
+                    "running" => Err("Cannot cleanup running tasks".into()),
+                    _ => Err(format!(
+                        "Invalid status: {s}. Valid options: exited, killed, unknown, all"
+                    )
+                    .into()),
+                })
+                .collect();
+            statuses
+        }
+        None => {
+            // Default: exited and killed only
+            Ok(vec![
+                storage::TaskStatus::Exited,
+                storage::TaskStatus::Killed,
+            ])
+        }
+    }
+}
+
+/// Format status list for display
+fn format_status_list(statuses: &[storage::TaskStatus]) -> String {
+    statuses
+        .iter()
+        .map(|s| s.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
