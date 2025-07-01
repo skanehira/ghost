@@ -4,26 +4,15 @@ use crate::app::{config, display, error::Result, helpers, process, process_state
 use rusqlite::Connection;
 
 /// Run a command in the background
-pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
-    validate_command(&command)?;
-    let env_vars = prepare_environment(&env)?;
-    let conn = helpers::init_db_connection()?;
-    let (process_info, child) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
-    finalize_process_launch(process_info, child);
-    Ok(())
-}
-
-/// Validate the command input
-fn validate_command(command: &[String]) -> Result<()> {
+pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
     if command.is_empty() {
         return Err("No command specified".into());
     }
+    let env_vars = config::env::parse_env_vars(&env)?;
+    let conn = storage::init_database()?;
+    let (process_info, child) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
+    finalize_process_launch(process_info, child);
     Ok(())
-}
-
-/// Prepare and parse environment variables
-fn prepare_environment(env: &[String]) -> Result<Vec<(String, String)>> {
-    config::env::parse_env_vars(env)
 }
 
 /// Spawn process and register it in the database
@@ -65,7 +54,7 @@ fn finalize_process_launch(process_info: process::ProcessInfo, child: std::proce
 
 /// List all background processes
 pub fn list(status_filter: Option<String>) -> Result<()> {
-    let conn = helpers::init_db_connection()?;
+    let conn = storage::init_database()?;
     let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref())?;
     display::print_task_list(&tasks);
 
@@ -74,8 +63,8 @@ pub fn list(status_filter: Option<String>) -> Result<()> {
 
 /// Show logs for a process
 pub fn log(task_id: &str, follow: bool) -> Result<()> {
-    let conn = helpers::init_db_connection()?;
-    let task = helpers::get_task_by_id(&conn, task_id)?;
+    let conn = storage::init_database()?;
+    let task = storage::get_task(&conn, task_id)?;
 
     let log_path = PathBuf::from(&task.log_path);
     let content = helpers::read_file_content(&log_path)?;
@@ -85,7 +74,7 @@ pub fn log(task_id: &str, follow: bool) -> Result<()> {
         // Use the new follow functionality
         helpers::follow_log_file(&log_path)?;
     } else {
-        helpers::print_file_content(&content);
+        print!("{content}");
     }
 
     Ok(())
@@ -93,8 +82,8 @@ pub fn log(task_id: &str, follow: bool) -> Result<()> {
 
 /// Stop a background process
 pub fn stop(task_id: &str, force: bool) -> Result<()> {
-    let conn = helpers::init_db_connection()?;
-    let task = helpers::get_task_by_id(&conn, task_id)?;
+    let conn = storage::init_database()?;
+    let task = storage::get_task(&conn, task_id)?;
 
     helpers::validate_task_running(&task)?;
 
@@ -112,10 +101,10 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
 
 /// Check status of a background process
 pub fn status(task_id: &str) -> Result<()> {
-    let conn = helpers::init_db_connection()?;
+    let conn = storage::init_database()?;
 
     // This will update the status if the process is no longer running
-    let task = helpers::get_task_with_status_update(&conn, task_id)?;
+    let task = storage::update_task_status_by_process_check(&conn, task_id)?;
     display::print_task_details(&task);
 
     Ok(())
@@ -130,7 +119,7 @@ pub fn kill(pid: u32) -> Result<()> {
 
 /// Clean up old finished tasks
 pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> Result<()> {
-    let conn = helpers::init_db_connection()?;
+    let conn = storage::init_database()?;
 
     // Parse status filter
     let status_filter = parse_status_filter(status.as_deref())?;

@@ -96,7 +96,7 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Run { command, cwd, env } => commands::run(command, cwd, env),
+        Commands::Run { command, cwd, env } => commands::spawn(command, cwd, env),
         Commands::List { status } => commands::list(status),
         Commands::Log { task_id, follow } => commands::log(&task_id, follow),
         Commands::Stop { task_id, force } => commands::stop(&task_id, force),
