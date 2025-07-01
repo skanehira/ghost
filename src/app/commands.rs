@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::app::{display, error::Result, process, process_state, storage};
+use crate::app::{config, display, error::Result, process, process_state, storage};
 
 /// Run a command in the background
 pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
@@ -9,16 +9,7 @@ pub fn run(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Resu
     }
 
     // Parse environment variables
-    let mut env_vars = Vec::new();
-    for env_str in env {
-        if let Some((key, value)) = env_str.split_once('=') {
-            env_vars.push((key.to_string(), value.to_string()));
-        } else {
-            return Err(
-                format!("Invalid environment variable format: {env_str}. Use KEY=VALUE").into(),
-            );
-        }
-    }
+    let env_vars = config::env::parse_env_vars(&env)?;
 
     // Initialize database
     let conn = storage::init_database()?;

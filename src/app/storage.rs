@@ -87,26 +87,15 @@ pub enum StorageError {
 
 pub type Result<T> = std::result::Result<T, StorageError>;
 
-/// Get the default database directory path
-fn get_db_dir() -> PathBuf {
-    let base_dir = if cfg!(windows) {
-        dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."))
-    } else {
-        dirs::data_dir().unwrap_or_else(|| PathBuf::from("."))
-    };
-
-    base_dir.join("ghost")
-}
-
 /// Get the database file path
 pub fn get_db_path() -> PathBuf {
-    get_db_dir().join("tasks.db")
+    crate::app::config::get_db_path()
 }
 
 /// Initialize the database and create tables if they don't exist
 pub fn init_database() -> Result<Connection> {
-    let db_dir = get_db_dir();
-    std::fs::create_dir_all(&db_dir)?;
+    let config = crate::app::config::Config::default();
+    config.ensure_directories()?;
 
     let db_path = get_db_path();
     let conn = Connection::open(db_path)?;

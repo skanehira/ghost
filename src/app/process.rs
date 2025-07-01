@@ -40,13 +40,7 @@ pub type Result<T> = std::result::Result<T, ProcessError>;
 
 /// Get the default log directory path
 fn get_log_dir() -> PathBuf {
-    let base_dir = if cfg!(windows) {
-        dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."))
-    } else {
-        dirs::data_dir().unwrap_or_else(|| PathBuf::from("."))
-    };
-
-    base_dir.join("ghost").join("logs")
+    crate::app::config::get_log_dir()
 }
 
 /// Spawn a background process with logging
