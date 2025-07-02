@@ -334,6 +334,19 @@ pub fn get_cleanup_candidates(
     days: Option<u64>,
     status_filter: &[TaskStatus],
 ) -> Result<Vec<Task>> {
+    // First, update status for all running tasks
+    let running_sql = "SELECT id FROM tasks WHERE status = 'running'";
+    let mut running_stmt = conn.prepare(running_sql)?;
+    let running_ids: Vec<String> = running_stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+
+    // Update status for each running task
+    for task_id in running_ids {
+        update_task_status_by_process_check(conn, &task_id)?;
+    }
+
+    // Now get cleanup candidates with filters applied
     let mut sql = "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks WHERE 1=1".to_string();
     let mut params: Vec<Box<dyn rusqlite::ToSql + '_>> = Vec::new();
 
