@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::app::{config, display, error::Result, helpers, process, process_state, storage};
+use crate::app::{config, display, error::Result, helpers, process, storage};
 use rusqlite::Connection;
 
 /// Run a command in the background
@@ -10,8 +10,8 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
     }
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
-    let (process_info, child) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
-    finalize_process_launch(process_info, child);
+    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
+    display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
     Ok(())
 }
 
@@ -46,12 +46,6 @@ fn spawn_and_register_process(
     Ok((process_info, child))
 }
 
-/// Finalize the process launch with notification and cleanup
-fn finalize_process_launch(process_info: process::ProcessInfo, child: std::process::Child) {
-    display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
-    std::mem::drop(child);
-}
-
 /// List all background processes
 pub fn list(status_filter: Option<String>) -> Result<()> {
     let conn = storage::init_database()?;
@@ -67,7 +61,8 @@ pub async fn log(task_id: &str, follow: bool) -> Result<()> {
     let task = storage::get_task(&conn, task_id)?;
 
     let log_path = PathBuf::from(&task.log_path);
-    let content = helpers::read_file_content(&log_path)?;
+    let content =
+        std::fs::read_to_string(&log_path).map_err(|e| format!("Failed to read log file: {e}"))?;
 
     if follow {
         display::print_log_follow_header(task_id, &task.log_path);
@@ -90,7 +85,11 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
     process::kill(task.pid, force)?;
 
     // Update status in database
-    let status = process_state::determine_status_after_kill(force);
+    let status = if force {
+        storage::TaskStatus::Killed
+    } else {
+        storage::TaskStatus::Exited
+    };
     storage::update_task_status(&conn, task_id, status, None)?;
 
     println!("Process {} ({}) has been {}", task_id, task.pid, status);

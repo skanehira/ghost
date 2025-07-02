@@ -38,11 +38,6 @@ pub enum ProcessError {
 
 pub type Result<T> = std::result::Result<T, ProcessError>;
 
-/// Get the default log directory path
-fn get_log_dir() -> PathBuf {
-    crate::app::config::get_log_dir()
-}
-
 /// Spawn a background process with logging
 /// Returns both ProcessInfo and Child handle to allow proper cleanup
 pub fn spawn_background_process(
@@ -56,7 +51,7 @@ pub fn spawn_background_process(
 
     // Generate task ID and prepare paths
     let task_id = Uuid::new_v4().to_string();
-    let log_dir = log_dir.unwrap_or_else(get_log_dir);
+    let log_dir = log_dir.unwrap_or_else(crate::app::config::get_log_dir);
 
     // Create log directory if it doesn't exist
     std::fs::create_dir_all(&log_dir)?;

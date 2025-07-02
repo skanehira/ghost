@@ -1,33 +1,23 @@
-use crate::app::{process, storage::TaskStatus};
+use crate::app::{
+    process,
+    storage::{Task, TaskStatus},
+};
 
 /// Check and update the status of a single task based on process existence
-pub fn update_task_status_if_needed(task: &mut crate::app::storage::Task) -> bool {
+pub fn update_task_status_if_needed(task: &mut Task) -> bool {
     if task.status == TaskStatus::Running && !process::exists(task.pid) {
         task.status = TaskStatus::Exited;
-        task.finished_at = Some(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64,
-        );
+        task.finished_at = Some(crate::app::helpers::now_timestamp());
         true // Status was updated
     } else {
         false // Status was not updated
     }
 }
 
-/// Check if a process is still alive and matches expected status
-pub fn verify_process_status(pid: u32, expected_status: TaskStatus) -> bool {
-    match expected_status {
-        TaskStatus::Running => process::exists(pid),
-        TaskStatus::Exited | TaskStatus::Killed | TaskStatus::Unknown => !process::exists(pid),
-    }
-}
-
-/// Get the appropriate task status based on process existence and force flag
-pub fn determine_status_after_kill(force: bool) -> TaskStatus {
-    if force {
-        TaskStatus::Killed
+/// Determine task status based on process state
+pub fn determine_task_status(pid: u32) -> TaskStatus {
+    if process::exists(pid) {
+        TaskStatus::Running
     } else {
         TaskStatus::Exited
     }
@@ -79,11 +69,5 @@ mod tests {
         let updated = update_task_status_if_needed(&mut task);
         assert!(!updated);
         assert_eq!(task.status, TaskStatus::Exited);
-    }
-
-    #[test]
-    fn test_determine_status_after_kill() {
-        assert_eq!(determine_status_after_kill(true), TaskStatus::Killed);
-        assert_eq!(determine_status_after_kill(false), TaskStatus::Exited);
     }
 }
