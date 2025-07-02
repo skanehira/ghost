@@ -1,26 +1,10 @@
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::mpsc;
 
-use crate::app::{error::Result, storage};
-
-/// Get current Unix timestamp in seconds
-pub fn now_timestamp() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64
-}
-
-/// Validate that a task is in running state
-pub fn validate_task_running(task: &storage::Task) -> Result<()> {
-    if task.status != storage::TaskStatus::Running {
-        return Err(format!("Task {} is not running (status: {})", task.id, task.status).into());
-    }
-    Ok(())
-}
+use crate::app::{error, error::Result};
 
 /// Follow a log file and print new lines as they appear (tail -f behavior)
 pub async fn follow_log_file(file_path: &PathBuf) -> Result<()> {
@@ -28,7 +12,9 @@ pub async fn follow_log_file(file_path: &PathBuf) -> Result<()> {
     use std::io::SeekFrom;
 
     if !tokio::fs::try_exists(file_path).await? {
-        return Err(format!("File not found: {}", file_path.display()).into());
+        return Err(error::GhostError::InvalidArgument {
+            message: format!("File not found: {}", file_path.display()),
+        });
     }
 
     // Read and print existing content first
@@ -54,12 +40,16 @@ pub async fn follow_log_file(file_path: &PathBuf) -> Result<()> {
         },
         Config::default().with_poll_interval(Duration::from_millis(200)),
     )
-    .map_err(|e| format!("Failed to create file watcher: {e}"))?;
+    .map_err(|e| error::GhostError::FileWatch {
+        message: format!("Failed to create file watcher: {e}"),
+    })?;
 
     // Watch the file for changes
     watcher
         .watch(file_path, RecursiveMode::NonRecursive)
-        .map_err(|e| format!("Failed to watch file: {e}"))?;
+        .map_err(|e| error::GhostError::FileWatch {
+            message: format!("Failed to watch file: {e}"),
+        })?;
 
     // Main event loop
     loop {
