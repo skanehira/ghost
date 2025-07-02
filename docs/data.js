@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751408364856,
+  "lastUpdate": 1751423157005,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -179,6 +179,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.97,
             "range": "± 3.05",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "a72d07b286639cd69917c5aba1875e5827166a35",
+          "message": "refactor: rename E2E test files with numbered prefixes\n\n- Rename all E2E test files from test_*.sh to 001_*.sh format\n- Update run_all_tests.sh to use new naming pattern [0-9][0-9][0-9]_*.sh\n- Remove zzz prefix from cleanup test, now uses 007_ prefix\n- Tests now run in logical order:\n  001_run_command.sh - Basic process spawning\n  002_list_command.sh - Process listing\n  003_log_command.sh - Log display\n  004_stop_status_commands.sh - Process control\n  005_kill_command.sh - Force termination\n  006_cwd_functionality.sh - Working directory\n  007_cleanup_command.sh - Database cleanup (runs last)\n\nThis provides better control over test execution order and makes dependencies clear.",
+          "timestamp": "2025-07-02T09:07:25+09:00",
+          "tree_id": "980a2ab34c340b0335deddc50dd46576539eccbd",
+          "url": "https://github.com/skanehira/ghost/commit/a72d07b286639cd69917c5aba1875e5827166a35"
+        },
+        "date": 1751423156545,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.24",
             "unit": "ns/iter"
           }
         ]
