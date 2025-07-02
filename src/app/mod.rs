@@ -6,3 +6,4 @@ pub mod helpers;
 pub mod process;
 pub mod process_state;
 pub mod storage;
+pub mod tui;

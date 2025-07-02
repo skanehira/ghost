@@ -85,6 +85,9 @@ enum Commands {
         #[arg(short, long)]
         all: bool,
     },
+
+    /// Start TUI mode for interactive task management
+    Tui,
 }
 
 #[tokio::main]
@@ -109,6 +112,7 @@ async fn main() {
             dry_run,
             all,
         } => commands::cleanup(days, status, dry_run, all),
+        Commands::Tui => commands::tui().await,
     };
 
     if let Err(e) = result {

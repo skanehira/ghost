@@ -224,3 +224,74 @@ fn format_status_list(statuses: &[storage::TaskStatus]) -> String {
         .collect::<Vec<_>>()
         .join(", ")
 }
+
+/// Start TUI mode
+pub async fn tui() -> Result<()> {
+    use crossterm::{
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+        execute,
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    };
+    use ratatui::{Terminal, backend::CrosstermBackend};
+    use std::io;
+    use tokio::time::{Duration, interval};
+
+    use crate::app::tui::app::TuiApp;
+
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Create app
+    let mut app = TuiApp::new()?;
+    app.refresh_tasks()?;
+
+    // Setup refresh interval
+    let mut refresh_interval = interval(Duration::from_secs(1));
+
+    let result = loop {
+        // Draw the UI
+        terminal.draw(|f| app.render(f))?;
+
+        // Handle input and refresh
+        tokio::select! {
+            // Handle keyboard events
+            key_result = async {
+                if event::poll(Duration::from_millis(50)).unwrap_or(false) {
+                    if let Ok(Event::Key(key)) = event::read() {
+                        return app.handle_key(key);
+                    }
+                }
+                Ok(())
+            } => {
+                if let Err(e) = key_result {
+                    break Err(e);
+                }
+                if app.should_quit() {
+                    break Ok(());
+                }
+            }
+
+            // Refresh tasks periodically
+            _ = refresh_interval.tick() => {
+                if let Err(e) = app.refresh_tasks() {
+                    break Err(e);
+                }
+            }
+        }
+    };
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    result
+}
