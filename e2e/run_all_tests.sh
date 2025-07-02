@@ -71,7 +71,7 @@ main() {
     
     # Find and run all test scripts (exclude helper files)
     local test_files
-    test_files=($(find "$E2E_DIR" -name "test_*.sh" -type f ! -name "test_helpers.sh" | sort))
+    test_files=($(find "$E2E_DIR" -name "[0-9][0-9][0-9]_*.sh" -type f | sort))
     
     if [[ ${#test_files[@]} -eq 0 ]]; then
         failure "No test files found in $E2E_DIR"
