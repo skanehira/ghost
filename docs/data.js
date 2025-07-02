@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751423157005,
+  "lastUpdate": 1751426333598,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -209,6 +209,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.24",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "ab3433751f75814351ee5d722ef6e441c412fe20",
+          "message": "refactor: consolidate timestamp generation into helper function\n\n- Add now_timestamp() helper to eliminate code duplication\n- Replace 8 instances of SystemTime::now().duration_since()... pattern\n- Centralizes Unix timestamp generation logic\n- Improves maintainability and consistency\n- Removes redundant imports in multiple files\n\nAddresses DRY principle violation in timestamp handling.",
+          "timestamp": "2025-07-02T12:13:07+09:00",
+          "tree_id": "3e29d20085ab6cfc59e8a2756af283db3e927efc",
+          "url": "https://github.com/skanehira/ghost/commit/ab3433751f75814351ee5d722ef6e441c412fe20"
+        },
+        "date": 1751426333109,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.94,
+            "range": "± 0.21",
             "unit": "ns/iter"
           }
         ]
