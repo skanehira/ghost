@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751438404205,
+  "lastUpdate": 1751473267142,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -329,6 +329,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.97,
             "range": "± 0.22",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "381da9b825590a4b16eff9d923245c6b44e35208",
+          "message": "feat: improve string formatting for clarity\n\nEnhanced string formatting across multiple modules for better readability\nand maintainability. Updated usage of format macros to leverage named\narguments for improved clarity.\n\nChanges include:\n- `truncate_string` in `display.rs` now uses named arguments.\n- Improved error messages in `file_watcher.rs` with named arguments.\n- Enhanced task validation error messages in `task_validation.rs`.\n- Refactored test cases in `tui_tests.rs` to use named arguments for\n  formatting strings.",
+          "timestamp": "2025-07-03T01:19:12+09:00",
+          "tree_id": "1ece113bc0349356b801b417193a1bc85d2a687c",
+          "url": "https://github.com/skanehira/ghost/commit/381da9b825590a4b16eff9d923245c6b44e35208"
+        },
+        "date": 1751473266805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.94,
+            "range": "± 0.13",
             "unit": "ns/iter"
           }
         ]
