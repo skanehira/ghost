@@ -1,19 +1,17 @@
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader};
 use tokio::sync::mpsc;
 
 use crate::app::{error::Result, storage};
 
-/// Read file content with standardized error handling
-pub fn read_file_content(file_path: &PathBuf) -> Result<String> {
-    if !file_path.exists() {
-        return Err(format!("File not found: {}", file_path.display()).into());
-    }
-
-    let content = std::fs::read_to_string(file_path)?;
-    Ok(content)
+/// Get current Unix timestamp in seconds
+pub fn now_timestamp() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
 }
 
 /// Validate that a task is in running state
