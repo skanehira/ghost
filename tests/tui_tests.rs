@@ -1,6 +1,7 @@
 use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
 use ghost::app::tui::{App, TaskFilter};
+use pretty_assertions::assert_eq;
 use ratatui::{Terminal, backend::TestBackend};
 use std::fs;
 
@@ -351,7 +352,7 @@ fn test_task_list_vertical_layout() {
     assert!(lines[1].contains("Status"));
 
     // Footer block should be separate
-    assert!(lines[lines.len() - 3].starts_with("┌")); // Footer top border
+    assert!(lines[lines.len() - 3].starts_with("├")); // Footer top border
     assert!(lines[lines.len() - 2].contains("j/k:Move"));
     assert!(lines[lines.len() - 2].contains("l:Log"));
     assert!(lines[lines.len() - 1].starts_with("└")); // Footer bottom border
