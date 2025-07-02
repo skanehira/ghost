@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751433643891,
+  "lastUpdate": 1751438404205,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -299,6 +299,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.96,
             "range": "± 0.54",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "7bb6a57c456f8ebb665a277a37ca5bdacd4eece2",
+          "message": "feat: implement log viewer with full keyboard navigation\n\n- Add log viewer component (LogViewerWidget) for displaying task logs\n- Implement ViewMode enum to switch between TaskList and LogView\n- Add complete keyboard navigation in log view:\n  - j/k: scroll up/down through log content\n  - g/G: jump to top/bottom of log\n  - Esc: return to task list\n  - q: quit application\n- Fix log view key binding issues with proper state management\n- Add scroll offset tracking and log line counting\n- Update footer to show 'l:Log' hint in task list\n- Add comprehensive tests for log viewer functionality\n- Update TODO.md to mark Phase 4 (log display) as completed\n\nResolves log display keyboard navigation and completes core TUI functionality.",
+          "timestamp": "2025-07-02T15:35:37+09:00",
+          "tree_id": "bdbe3448f0417487357c66c23214bf20bb1f8969",
+          "url": "https://github.com/skanehira/ghost/commit/7bb6a57c456f8ebb665a277a37ca5bdacd4eece2"
+        },
+        "date": 1751438403722,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.97,
+            "range": "± 0.22",
             "unit": "ns/iter"
           }
         ]
