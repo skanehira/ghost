@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    layout::{Constraint, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, Widget},
 };
@@ -27,7 +27,8 @@ use crate::app::storage::task_status::TaskStatus;
 
 impl App {
     pub fn render_task_list(&self, frame: &mut Frame, area: Rect) {
-        let task_list_widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index);
+        let task_list_widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index)
+            .with_scroll_offset(self.table_scroll_offset);
         frame.render_widget(task_list_widget, area);
     }
 }
@@ -36,6 +37,7 @@ pub struct TaskListWidget<'a> {
     tasks: &'a [Task],
     filter: &'a TaskFilter,
     selected_index: usize,
+    scroll_offset: usize,
 }
 
 impl<'a> TaskListWidget<'a> {
@@ -44,7 +46,13 @@ impl<'a> TaskListWidget<'a> {
             tasks,
             filter,
             selected_index,
+            scroll_offset: 0,
         }
+    }
+
+    pub fn with_scroll_offset(mut self, scroll_offset: usize) -> Self {
+        self.scroll_offset = scroll_offset;
+        self
     }
 
     fn filter_name(&self) -> &'static str {
@@ -92,15 +100,29 @@ impl<'a> TaskListWidget<'a> {
 
 impl<'a> Widget for TaskListWidget<'a> {
     fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
+        // Split the area into content and footer
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),    // Content
+                Constraint::Length(3), // Footer
+            ])
+            .split(area);
+
+        // Render content (table)
+        self.render_content(layout[0], buf);
+
+        // Render footer
+        self.render_footer(layout[1], buf);
+    }
+}
+
+impl<'a> TaskListWidget<'a> {
+    fn render_content(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
         let title = format!(" Ghost TUI v0.0.1 [Filter: {}] ", self.filter_name());
 
-        let block = Block::default()
-            .title(title)
-            .borders(Borders::ALL)
-            .border_style(Style::default());
-
         if self.tasks.is_empty() {
-            // Empty state with footer
+            // Empty state
             let rows = vec![
                 Row::new(vec![
                     Cell::from(""),
@@ -127,23 +149,20 @@ impl<'a> Widget for TaskListWidget<'a> {
 
             let table = Table::new(rows, COLUMN_CONSTRAINTS)
                 .header(self.create_header_row())
-                .block(block);
+                .block(Block::default().borders(Borders::ALL).title(title));
 
             table.render(area, buf);
-
-            // Render footer separator manually
-            self.render_footer_separator(area, buf);
-            self.render_footer_text(area, buf);
-            self.render_bottom_border(area, buf);
         } else {
-            // Table with tasks
-            let rows: Vec<Row> = self
-                .tasks
+            // Table with tasks - apply scrolling
+            let visible_tasks: Vec<&Task> = self.tasks.iter().skip(self.scroll_offset).collect();
+
+            let rows: Vec<Row> = visible_tasks
                 .iter()
                 .enumerate()
-                .map(|(i, task)| {
-                    let style = if i == self.selected_index {
-                        Style::default().bg(Color::Yellow).fg(Color::Black)
+                .map(|(display_index, task)| {
+                    let actual_index = self.scroll_offset + display_index;
+                    let style = if actual_index == self.selected_index {
+                        Style::default().bg(Color::LightGreen).fg(Color::Black)
                     } else {
                         Style::default()
                     };
@@ -163,94 +182,17 @@ impl<'a> Widget for TaskListWidget<'a> {
 
             let table = Table::new(rows, COLUMN_CONSTRAINTS)
                 .header(self.create_header_row())
-                .block(block);
+                .block(Block::default().borders(Borders::ALL).title(title));
 
             table.render(area, buf);
-
-            // Render footer separator manually
-            self.render_footer_separator(area, buf);
-            self.render_footer_text(area, buf);
-            self.render_bottom_border(area, buf);
-        }
-    }
-}
-
-impl<'a> TaskListWidget<'a> {
-    fn render_footer_separator(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
-        let y = area.y + area.height - 3; // Third to last row (above footer text)
-        let x_start = area.x;
-        let x_end = area.x + area.width - 1;
-
-        // Draw the separator line
-        buf[(x_start, y)].set_symbol("├");
-        for x in x_start + 1..x_end {
-            buf[(x, y)].set_symbol("─");
-        }
-        buf[(x_end, y)].set_symbol("┤");
-    }
-
-    fn render_footer_text(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
-        let y = area.y + area.height - 2; // Second to last row
-        let text = " j/k:Move  l:Log  q:Quit  g/G:Top/Bottom";
-        let x_start = area.x + 1; // Inside the border
-
-        // Draw border characters
-        buf[(area.x, y)].set_symbol("│");
-        buf[(area.x + area.width - 1, y)].set_symbol("│");
-
-        // Draw the text
-        for (i, ch) in text.chars().enumerate() {
-            let x = x_start + i as u16;
-            if x < area.x + area.width - 1 {
-                buf[(x, y)].set_symbol(&ch.to_string());
-            }
-        }
-
-        // Fill remaining space with spaces inside the border
-        for x in (x_start + text.len() as u16)..(area.x + area.width - 1) {
-            buf[(x, y)].set_symbol(" ");
         }
     }
 
-    fn render_bottom_border(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
-        let y = area.y + area.height - 1; // Last row
-        let x_start = area.x;
-        let x_end = area.x + area.width - 1;
-
-        // Draw the bottom border
-        buf[(x_start, y)].set_symbol("└");
-        for x in x_start + 1..x_end {
-            buf[(x, y)].set_symbol("─");
-        }
-        buf[(x_end, y)].set_symbol("┘");
-    }
-}
-
-/// Footer widget displaying key bindings
-pub struct FooterWidget;
-
-impl Default for FooterWidget {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl FooterWidget {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Widget for FooterWidget {
-    fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
-        let keybinds_text = " j/k:Move  q:Quit  g/G:Top/Bottom";
-
-        let footer = Paragraph::new(keybinds_text).style(Style::default()).block(
-            Block::default()
-                .borders(Borders::TOP)
-                .border_style(Style::default()),
-        );
-
+    fn render_footer(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
+        let keybinds_text = " j/k:Move  l:Log  q:Quit  g/G:Top/Bottom ";
+        let footer = Paragraph::new(keybinds_text)
+            .block(Block::default().borders(Borders::ALL))
+            .style(Style::default());
         footer.render(area, buf);
     }
 }

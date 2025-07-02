@@ -260,10 +260,8 @@ pub async fn tui() -> Result<()> {
         tokio::select! {
             // Handle keyboard events
             key_result = async {
-                if event::poll(Duration::from_millis(50)).unwrap_or(false) {
-                    if let Ok(Event::Key(key)) = event::read() {
-                        return app.handle_key(key);
-                    }
+                if let Ok(Event::Key(key)) = event::read() {
+                    return app.handle_key(key);
                 }
                 Ok(())
             } => {

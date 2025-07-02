@@ -8,6 +8,7 @@ pub struct App {
     pub tasks: Vec<Task>,
     pub selected_index: usize,
     pub filter: TaskFilter,
+    pub table_scroll_offset: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,6 +37,7 @@ impl App {
             tasks: Vec::new(),
             selected_index: 0,
             filter: TaskFilter::All,
+            table_scroll_offset: 0,
         }
     }
 
@@ -44,6 +46,16 @@ impl App {
             tasks,
             selected_index: 0,
             filter: TaskFilter::All,
+            table_scroll_offset: 0,
+        }
+    }
+
+    pub fn with_tasks_and_scroll(tasks: Vec<Task>, scroll_offset: usize) -> Self {
+        Self {
+            tasks,
+            selected_index: 0,
+            filter: TaskFilter::All,
+            table_scroll_offset: scroll_offset,
         }
     }
 }

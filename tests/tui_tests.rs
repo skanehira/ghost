@@ -81,7 +81,7 @@ fn normalize_buffer_output(output: &str) -> String {
 
 #[test]
 fn test_empty_task_list_display() {
-    let backend = TestBackend::new(75, 8);
+    let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
     let app = App::new();
@@ -106,7 +106,7 @@ fn test_empty_task_list_display() {
 
 #[test]
 fn test_task_list_with_tasks_display() {
-    let backend = TestBackend::new(75, 8);
+    let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
@@ -132,7 +132,7 @@ fn test_task_list_with_tasks_display() {
 
 #[test]
 fn test_task_list_selection() {
-    let backend = TestBackend::new(75, 8);
+    let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
@@ -177,7 +177,7 @@ fn test_task_filter_display() {
 
 #[test]
 fn test_footer_keybinds_display() {
-    let backend = TestBackend::new(75, 8);
+    let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
     let app = App::new();
@@ -202,7 +202,7 @@ fn test_footer_keybinds_display() {
 
 #[test]
 fn test_footer_keybinds_with_tasks() {
-    let backend = TestBackend::new(75, 8);
+    let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
@@ -318,4 +318,136 @@ fn test_log_view_key_handling() {
     let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
     app.handle_key(key_esc).unwrap();
     assert_eq!(app.view_mode, ghost::app::tui::ViewMode::TaskList);
+}
+
+#[test]
+fn test_task_list_vertical_layout() {
+    let backend = TestBackend::new(75, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    let tasks = create_test_tasks();
+    let app = App::with_tasks(tasks);
+
+    terminal
+        .draw(|f| {
+            app.render_task_list(f, f.area());
+        })
+        .unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+
+    // Check that the layout has proper structure with separate blocks
+    // The layout should be:
+    // 1. Content block (variable height)
+    // 2. Footer block (3 lines)
+
+    let lines: Vec<&str> = buffer_output.lines().collect();
+
+    // Content block should contain title and table
+    assert!(lines[0].starts_with("┌")); // Content top border
+    assert!(lines[0].contains("Ghost TUI v0.0.1"));
+    assert!(lines[1].contains("ID"));
+    assert!(lines[1].contains("PID"));
+    assert!(lines[1].contains("Status"));
+
+    // Footer block should be separate
+    assert!(lines[lines.len() - 3].starts_with("┌")); // Footer top border
+    assert!(lines[lines.len() - 2].contains("j/k:Move"));
+    assert!(lines[lines.len() - 2].contains("l:Log"));
+    assert!(lines[lines.len() - 1].starts_with("└")); // Footer bottom border
+}
+
+#[test]
+fn test_table_scroll_functionality() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let mut app = TuiApp::new().unwrap();
+
+    // Create many tasks to enable scrolling
+    let mut tasks = Vec::new();
+    for i in 0..20 {
+        tasks.push(Task {
+            id: format!("task_{:03}", i),
+            pid: 1000 + i as u32,
+            pgid: Some(1000 + i as i32),
+            command: format!(r#"["echo","task_{}"]"#, i),
+            env: None,
+            cwd: None,
+            status: TaskStatus::Running,
+            exit_code: None,
+            started_at: 1704109200 + i as i64,
+            finished_at: None,
+            log_path: format!("/tmp/test_{}.log", i),
+        });
+    }
+    app.tasks = tasks;
+    app.table_scroll_offset = 0;
+
+    // Test scrolling down
+    let key_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+    app.handle_key(key_j).unwrap();
+
+    // After first j, selection should move but scroll should not change yet
+    assert_eq!(app.selected_index, 1);
+    assert_eq!(app.table_scroll_offset, 0);
+
+    // Test scrolling up
+    let key_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+    app.handle_key(key_k).unwrap();
+    assert_eq!(app.selected_index, 0);
+    assert_eq!(app.table_scroll_offset, 0);
+
+    // Test going to bottom triggers scroll
+    let key_shift_g = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
+    app.handle_key(key_shift_g).unwrap();
+    assert_eq!(app.selected_index, 19); // Last task
+    // Scroll offset should be adjusted to show the selected item
+    assert!(app.table_scroll_offset > 0);
+
+    // Test going to top resets scroll
+    let key_g = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE);
+    app.handle_key(key_g).unwrap();
+    assert_eq!(app.selected_index, 0);
+    assert_eq!(app.table_scroll_offset, 0);
+}
+
+#[test]
+fn test_table_scroll_display() {
+    let backend = TestBackend::new(75, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // Create many tasks
+    let mut tasks = Vec::new();
+    for i in 0..15 {
+        tasks.push(Task {
+            id: format!("task_{:03}", i),
+            pid: 1000 + i as u32,
+            pgid: Some(1000 + i as i32),
+            command: format!(r#"["echo","task_{}"]"#, i),
+            env: None,
+            cwd: None,
+            status: TaskStatus::Running,
+            exit_code: None,
+            started_at: 1704109200 + i as i64,
+            finished_at: None,
+            log_path: format!("/tmp/test_{}.log", i),
+        });
+    }
+
+    let app = App::with_tasks_and_scroll(tasks, 5); // Start scrolled down 5 rows
+
+    terminal
+        .draw(|f| {
+            app.render_task_list(f, f.area());
+        })
+        .unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+
+    // Should show tasks starting from task_005 due to scroll offset
+    assert!(buffer_output.contains("task_00"));
+    // Should not show first few tasks due to scrolling
+    assert!(!buffer_output.contains("task_000"));
+    assert!(!buffer_output.contains("task_001"));
 }

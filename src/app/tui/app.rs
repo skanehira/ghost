@@ -1,5 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{Frame, layout::Rect};
+use rusqlite::Connection;
 
 use super::log_viewer::LogViewerWidget;
 use super::{TaskFilter, ViewMode};
@@ -16,12 +17,14 @@ pub struct TuiApp {
     pub view_mode: ViewMode,
     pub log_scroll_offset: usize,
     pub log_lines_count: usize,
-    config: Config,
+    pub table_scroll_offset: usize,
+    conn: Connection,
 }
 
 impl TuiApp {
     pub fn new() -> Result<Self> {
         let config = Config::default();
+        let conn = rusqlite::Connection::open(&config.db_path)?;
 
         Ok(Self {
             tasks: Vec::new(),
@@ -31,14 +34,13 @@ impl TuiApp {
             view_mode: ViewMode::TaskList,
             log_scroll_offset: 0,
             log_lines_count: 0,
-            config,
+            table_scroll_offset: 0,
+            conn,
         })
     }
 
     /// Load tasks from database
     pub fn refresh_tasks(&mut self) -> Result<()> {
-        let conn = rusqlite::Connection::open(&self.config.db_path)?;
-
         // Filter status for database query
         let status_filter = match self.filter {
             TaskFilter::All => None,
@@ -47,7 +49,7 @@ impl TuiApp {
             TaskFilter::Killed => Some("killed"),
         };
 
-        self.tasks = task_repository::get_tasks_with_process_check(&conn, status_filter)?;
+        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter)?;
 
         // Adjust selected index if needed
         if self.selected_index >= self.tasks.len() && !self.tasks.is_empty() {
@@ -84,10 +86,12 @@ impl TuiApp {
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
                 // Handle 'gg' for top - this is simplified, real vim would need state tracking
                 self.selected_index = 0;
+                self.table_scroll_offset = 0;
             }
             KeyCode::Char('G') => {
                 if !self.tasks.is_empty() {
                     self.selected_index = self.tasks.len() - 1;
+                    self.adjust_scroll_for_selection();
                 }
             }
 
@@ -154,12 +158,29 @@ impl TuiApp {
     fn move_selection_down(&mut self) {
         if !self.tasks.is_empty() && self.selected_index < self.tasks.len() - 1 {
             self.selected_index += 1;
+            self.adjust_scroll_for_selection();
         }
     }
 
     fn move_selection_up(&mut self) {
         if self.selected_index > 0 {
             self.selected_index -= 1;
+            self.adjust_scroll_for_selection();
+        }
+    }
+
+    fn adjust_scroll_for_selection(&mut self) {
+        // Calculate visible area height (total height - header - footer - borders)
+        // For simplicity, assume we can display about 5 task rows in the visible area
+        let visible_rows = 5;
+
+        // If selected item is below visible area, scroll down
+        if self.selected_index >= self.table_scroll_offset + visible_rows {
+            self.table_scroll_offset = self.selected_index.saturating_sub(visible_rows - 1);
+        }
+        // If selected item is above visible area, scroll up
+        else if self.selected_index < self.table_scroll_offset {
+            self.table_scroll_offset = self.selected_index;
         }
     }
 
@@ -215,7 +236,8 @@ impl TuiApp {
     fn render_task_list(&self, frame: &mut Frame, area: Rect) {
         use super::task_list::TaskListWidget;
 
-        let widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index);
+        let widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index)
+            .with_scroll_offset(self.table_scroll_offset);
         frame.render_widget(widget, area);
     }
 
