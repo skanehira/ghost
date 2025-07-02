@@ -1,4 +1,5 @@
 pub mod app;
+pub mod log_viewer;
 pub mod task_list;
 
 use crate::app::storage::task::Task;
@@ -15,6 +16,18 @@ pub enum TaskFilter {
     Running,
     Exited,
     Killed,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ViewMode {
+    TaskList,
+    LogView,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl App {

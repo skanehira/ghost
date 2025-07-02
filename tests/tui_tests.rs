@@ -243,6 +243,79 @@ fn test_footer_contains_keybinds() {
 
     // Check that footer contains essential keybinds
     assert!(buffer_output.contains("j/k:Move"));
+    assert!(buffer_output.contains("l:Log"));
     assert!(buffer_output.contains("q:Quit"));
     assert!(buffer_output.contains("g/G:Top/Bottom"));
+}
+
+#[test]
+fn test_log_viewer_display() {
+    use ghost::app::tui::log_viewer::LogViewerWidget;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    let backend = TestBackend::new(75, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    let tasks = create_test_tasks();
+    let selected_task = &tasks[0]; // First task
+
+    terminal
+        .draw(|f| {
+            let widget = LogViewerWidget::new(selected_task);
+            f.render_widget(widget, f.area());
+        })
+        .unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+
+    // Check that log viewer header is present
+    assert!(buffer_output.contains("Log Viewer"));
+    assert!(buffer_output.contains("abc1234")); // Task ID should be in header
+
+    // Check that footer keybinds are present
+    assert!(buffer_output.contains("j/k:Scroll"));
+    assert!(buffer_output.contains("gg/G:Top/Bottom"));
+    assert!(buffer_output.contains("Esc:Back"));
+}
+
+#[test]
+fn test_log_view_key_handling() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let mut app = TuiApp::new().unwrap();
+
+    // Add test tasks
+    let tasks = create_test_tasks();
+    app.tasks = tasks;
+    app.selected_index = 0;
+
+    // Switch to log view
+    let key_l = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE);
+    app.handle_key(key_l).unwrap();
+
+    // Verify we're in log view mode
+    assert_eq!(app.view_mode, ghost::app::tui::ViewMode::LogView);
+
+    // Test scroll down
+    let key_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+    app.handle_key(key_j).unwrap();
+
+    // Test scroll up
+    let key_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+    app.handle_key(key_k).unwrap();
+
+    // Test go to top
+    let key_g = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE);
+    app.handle_key(key_g).unwrap();
+    assert_eq!(app.log_scroll_offset, 0);
+
+    // Test go to bottom
+    let key_shift_g = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
+    app.handle_key(key_shift_g).unwrap();
+
+    // Test return to task list
+    let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+    app.handle_key(key_esc).unwrap();
+    assert_eq!(app.view_mode, ghost::app::tui::ViewMode::TaskList);
 }

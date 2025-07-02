@@ -191,7 +191,7 @@ impl<'a> TaskListWidget<'a> {
 
     fn render_footer_text(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
         let y = area.y + area.height - 2; // Second to last row
-        let text = " j/k:Move  q:Quit  g/G:Top/Bottom";
+        let text = " j/k:Move  l:Log  q:Quit  g/G:Top/Bottom";
         let x_start = area.x + 1; // Inside the border
 
         // Draw border characters
@@ -228,6 +228,12 @@ impl<'a> TaskListWidget<'a> {
 
 /// Footer widget displaying key bindings
 pub struct FooterWidget;
+
+impl Default for FooterWidget {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl FooterWidget {
     pub fn new() -> Self {
