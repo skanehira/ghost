@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751426333598,
+  "lastUpdate": 1751427750999,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -238,6 +238,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "tests::bench_fib",
             "value": 18.94,
+            "range": "± 0.21",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "8c60779f5979a7ec2d74bcbae823cad89f3e8663",
+          "message": "chore: remove unused file",
+          "timestamp": "2025-07-02T12:38:26+09:00",
+          "tree_id": "3ef53b0d4e5eea5cf508234d78136e21e6c97f58",
+          "url": "https://github.com/skanehira/ghost/commit/8c60779f5979a7ec2d74bcbae823cad89f3e8663"
+        },
+        "date": 1751427750133,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
             "range": "± 0.21",
             "unit": "ns/iter"
           }
