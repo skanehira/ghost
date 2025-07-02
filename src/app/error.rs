@@ -1,34 +1,65 @@
 #[derive(Debug, thiserror::Error)]
 pub enum GhostError {
-    #[error("Process error: {0}")]
-    Process(#[from] crate::app::process::ProcessError),
+    // Process-related errors
+    #[error("Process spawn failed: {message}")]
+    ProcessSpawn { message: String },
 
-    #[error("Storage error: {0}")]
-    Storage(#[from] crate::app::storage::StorageError),
+    #[error("Process operation failed: {message}")]
+    ProcessOperation { message: String },
 
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("Log file creation failed: {path} - {source}")]
+    LogFileCreation {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
 
-    #[error("Invalid argument: {0}")]
-    InvalidArgument(String),
+    // Storage-related errors
+    #[error("Database error: {source}")]
+    Database {
+        #[from]
+        source: rusqlite::Error,
+    },
 
-    #[error("Task not found: {0}")]
-    TaskNotFound(String),
+    #[error("Data serialization error: {source}")]
+    Serialization {
+        #[from]
+        source: serde_json::Error,
+    },
 
-    #[error("Configuration error: {0}")]
-    Config(String),
-}
+    // File system errors
+    #[error("File operation failed: {source}")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
 
-impl From<&str> for GhostError {
-    fn from(s: &str) -> Self {
-        GhostError::InvalidArgument(s.to_string())
-    }
-}
+    // Task management errors
+    #[error("Task not found: {task_id}")]
+    TaskNotFound { task_id: String },
 
-impl From<String> for GhostError {
-    fn from(s: String) -> Self {
-        GhostError::InvalidArgument(s)
-    }
+    #[error("Task operation failed: {task_id} - {message}")]
+    TaskOperation { task_id: String, message: String },
+
+    // Configuration errors
+    #[error("Configuration error: {message}")]
+    Config { message: String },
+
+    // Input validation errors
+    #[error("Invalid argument: {message}")]
+    InvalidArgument { message: String },
+
+    // System-level errors
+    #[cfg(unix)]
+    #[error("Unix system error: {source}")]
+    Unix {
+        #[from]
+        source: nix::Error,
+    },
+
+    // File watching errors (for log following)
+    #[error("File watching error: {message}")]
+    FileWatch { message: String },
 }
 
 pub type Result<T> = std::result::Result<T, GhostError>;

@@ -74,9 +74,11 @@ pub mod env {
             if let Some((key, value)) = env_str.split_once('=') {
                 env_vars.push((key.to_string(), value.to_string()));
             } else {
-                return Err(GhostError::InvalidArgument(format!(
-                    "Invalid environment variable format: {env_str}. Use KEY=VALUE"
-                )));
+                return Err(GhostError::InvalidArgument {
+                    message: format!(
+                        "Invalid environment variable format: {env_str}. Use KEY=VALUE"
+                    ),
+                });
             }
         }
         Ok(env_vars)

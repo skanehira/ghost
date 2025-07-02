@@ -1,9 +1,9 @@
 use rusqlite::Connection;
 
-use super::error::Result;
 use super::task::Task;
 use super::task_repository::{row_to_task, update_task_status_by_process_check};
 use super::task_status::TaskStatus;
+use crate::app::error::Result;
 
 /// Clean up old tasks (legacy function)
 pub fn cleanup_old_tasks(conn: &Connection, days: u64) -> Result<usize> {

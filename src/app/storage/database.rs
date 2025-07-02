@@ -1,4 +1,4 @@
-use super::error::Result;
+use crate::app::error::Result;
 use rusqlite::Connection;
 
 /// Initialize the database and create tables if they don't exist

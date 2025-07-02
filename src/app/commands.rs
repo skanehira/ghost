@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 
-use crate::app::{config, display, error::Result, helpers, process, storage};
+use crate::app::{config, display, error, error::Result, helpers, process, storage};
 use rusqlite::Connection;
 
 /// Run a command in the background
 pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
     if command.is_empty() {
-        return Err("No command specified".into());
+        return Err(error::GhostError::InvalidArgument {
+            message: "No command specified".to_string(),
+        });
     }
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
@@ -62,7 +64,9 @@ pub async fn log(task_id: &str, follow: bool) -> Result<()> {
 
     let log_path = PathBuf::from(&task.log_path);
     let content =
-        std::fs::read_to_string(&log_path).map_err(|e| format!("Failed to read log file: {e}"))?;
+        std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
+            message: format!("Failed to read log file: {e}"),
+        })?;
 
     if follow {
         display::print_log_follow_header(task_id, &task.log_path);
@@ -190,11 +194,14 @@ fn parse_status_filter(status: Option<&str>) -> Result<Vec<storage::TaskStatus>>
                     "exited" => Ok(storage::TaskStatus::Exited),
                     "killed" => Ok(storage::TaskStatus::Killed),
                     "unknown" => Ok(storage::TaskStatus::Unknown),
-                    "running" => Err("Cannot cleanup running tasks".into()),
-                    _ => Err(format!(
-                        "Invalid status: {s}. Valid options: exited, killed, unknown, all"
-                    )
-                    .into()),
+                    "running" => Err(error::GhostError::InvalidArgument {
+                        message: "Cannot cleanup running tasks".to_string(),
+                    }),
+                    _ => Err(error::GhostError::InvalidArgument {
+                        message: format!(
+                            "Invalid status: {s}. Valid options: exited, killed, unknown, all"
+                        ),
+                    }),
                 })
                 .collect();
             statuses

@@ -20,23 +20,7 @@ pub struct ProcessInfo {
     pub log_path: PathBuf,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum ProcessError {
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Process spawn failed: {0}")]
-    SpawnFailed(String),
-
-    #[error("Failed to create log file: {0}")]
-    LogFileCreation(String),
-
-    #[cfg(unix)]
-    #[error("Unix system error: {0}")]
-    Unix(#[from] nix::Error),
-}
-
-pub type Result<T> = std::result::Result<T, ProcessError>;
+use crate::app::error::{GhostError, Result};
 
 /// Spawn a background process with logging
 /// Returns both ProcessInfo and Child handle to allow proper cleanup
@@ -46,7 +30,9 @@ pub fn spawn_background_process(
     log_dir: Option<PathBuf>,
 ) -> Result<(ProcessInfo, Child)> {
     if command.is_empty() {
-        return Err(ProcessError::SpawnFailed("Empty command".to_string()));
+        return Err(GhostError::ProcessSpawn {
+            message: "Empty command".to_string(),
+        });
     }
 
     // Generate task ID and prepare paths
@@ -59,8 +45,10 @@ pub fn spawn_background_process(
     let log_path = log_dir.join(format!("{task_id}.log"));
 
     // Create log file
-    let log_file =
-        File::create(&log_path).map_err(|e| ProcessError::LogFileCreation(e.to_string()))?;
+    let log_file = File::create(&log_path).map_err(|e| GhostError::LogFileCreation {
+        path: log_path.to_string_lossy().to_string(),
+        source: e,
+    })?;
 
     // Setup command
     let mut cmd = Command::new(&command[0]);
@@ -80,9 +68,9 @@ pub fn spawn_background_process(
     }
 
     // Spawn the process
-    let child = cmd
-        .spawn()
-        .map_err(|e| ProcessError::SpawnFailed(format!("Failed to spawn process: {e}")))?;
+    let child = cmd.spawn().map_err(|e| GhostError::ProcessSpawn {
+        message: format!("Failed to spawn process: {e}"),
+    })?;
 
     let pid = child.id();
 

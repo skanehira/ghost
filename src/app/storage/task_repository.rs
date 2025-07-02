@@ -2,9 +2,9 @@ use std::path::Path;
 
 use rusqlite::{Connection, Result as SqliteResult, Row};
 
-use super::error::Result;
 use super::task::Task;
 use super::task_status::TaskStatus;
+use crate::app::error::Result;
 use crate::app::process_state;
 
 /// Insert a new task into the database
@@ -141,9 +141,9 @@ pub fn delete_task(conn: &Connection, task_id: &str) -> Result<()> {
     let rows_affected = conn.execute("DELETE FROM tasks WHERE id = ?1", [task_id])?;
 
     if rows_affected == 0 {
-        return Err(super::error::StorageError::TaskNotFound(
-            task_id.to_string(),
-        ));
+        return Err(crate::app::error::GhostError::TaskNotFound {
+            task_id: task_id.to_string(),
+        });
     }
 
     Ok(())
