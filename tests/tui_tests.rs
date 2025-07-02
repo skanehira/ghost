@@ -7,7 +7,7 @@ use std::fs;
 
 /// Helper function to load expected output from file
 fn load_expected(filename: &str) -> String {
-    let path = format!("tests/expected/{}", filename);
+    let path = format!("tests/expected/{filename}");
     fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read expected file: {}", path))
 }
 
@@ -369,17 +369,17 @@ fn test_table_scroll_functionality() {
     let mut tasks = Vec::new();
     for i in 0..20 {
         tasks.push(Task {
-            id: format!("task_{:03}", i),
+            id: format!("task_{i:03}"),
             pid: 1000 + i as u32,
             pgid: Some(1000 + i as i32),
-            command: format!(r#"["echo","task_{}"]"#, i),
+            command: format!(r#"["echo","task_{i}"]"#),
             env: None,
             cwd: None,
             status: TaskStatus::Running,
             exit_code: None,
             started_at: 1704109200 + i as i64,
             finished_at: None,
-            log_path: format!("/tmp/test_{}.log", i),
+            log_path: format!("/tmp/test_{i}.log"),
         });
     }
     app.tasks = tasks;
@@ -422,17 +422,17 @@ fn test_table_scroll_display() {
     let mut tasks = Vec::new();
     for i in 0..15 {
         tasks.push(Task {
-            id: format!("task_{:03}", i),
+            id: format!("task_{i:03}"),
             pid: 1000 + i as u32,
-            pgid: Some(1000 + i as i32),
-            command: format!(r#"["echo","task_{}"]"#, i),
+            pgid: Some(1000 + i),
+            command: format!(r#"["echo","task_{i}"]"#),
             env: None,
             cwd: None,
             status: TaskStatus::Running,
             exit_code: None,
             started_at: 1704109200 + i as i64,
             finished_at: None,
-            log_path: format!("/tmp/test_{}.log", i),
+            log_path: format!("/tmp/test_{i}.log"),
         });
     }
 

@@ -103,7 +103,7 @@ fn format_timestamp(timestamp: i64, format_str: &str) -> String {
 fn truncate_string(s: &str, max_length: usize) -> String {
     if s.len() > max_length {
         if max_length >= 3 {
-            format!("{}...", &s[..max_length - 3])
+            format!("{truncated}...", truncated = &s[..max_length - 3])
         } else {
             s[..max_length].to_string()
         }

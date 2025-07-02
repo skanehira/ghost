@@ -13,7 +13,7 @@ pub async fn follow_log_file(file_path: &PathBuf) -> Result<()> {
 
     if !tokio::fs::try_exists(file_path).await? {
         return Err(error::GhostError::InvalidArgument {
-            message: format!("File not found: {}", file_path.display()),
+            message: format!("File not found: {path}", path = file_path.display()),
         });
     }
 
