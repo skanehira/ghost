@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751427750999,
+  "lastUpdate": 1751433643891,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -269,6 +269,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.21",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "14655948921952c103a26e006c08e45f4af5cbc2",
+          "message": "refactor: unify error handling with direct enum variants\n\n- Consolidate ProcessError and StorageError into single GhostError\n- Remove unnecessary constructor methods (task_not_found, etc.)\n- Use direct enum variants: GhostError::TaskNotFound { task_id }\n- Eliminate string-to-error conversions for better type safety\n- Remove storage/error.rs module (no longer needed)\n- Update all error creation sites to use structured variants\n\nResults in more Rust-idiomatic error handling with better context.",
+          "timestamp": "2025-07-02T13:28:34+09:00",
+          "tree_id": "1da47ad5d92c4d68da9bcee065f0cfa8c1a66da2",
+          "url": "https://github.com/skanehira/ghost/commit/14655948921952c103a26e006c08e45f4af5cbc2"
+        },
+        "date": 1751433643382,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.96,
+            "range": "± 0.54",
             "unit": "ns/iter"
           }
         ]
