@@ -187,7 +187,7 @@ impl<'a> TaskListWidget<'a> {
                 .map(|(display_index, task)| {
                     let actual_index = self.scroll_offset + display_index;
                     let style = if actual_index == self.selected_index {
-                        Style::default().bg(Color::LightGreen).fg(Color::Black)
+                        Style::default().bg(Color::DarkGray)
                     } else {
                         Style::default()
                     };

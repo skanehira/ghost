@@ -1,7 +1,8 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph, Widget, Wrap},
 };
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -48,11 +49,6 @@ impl<'a> LogViewerWidget<'a> {
                 self.log_lines = vec!["Log file not found or cannot be read".to_string()];
             }
         }
-
-        // If scroll_offset is not set (0), start at the bottom of the log (most recent content)
-        if self.scroll_offset == 0 && !self.log_lines.is_empty() {
-            self.scroll_offset = self.log_lines.len().saturating_sub(1);
-        }
     }
 
     pub fn scroll_up(&mut self) {
@@ -77,36 +73,51 @@ impl<'a> LogViewerWidget<'a> {
         }
     }
 
-    fn get_display_lines(&self, area_height: usize) -> Vec<ListItem> {
+    pub fn get_lines_count(&self) -> usize {
+        self.log_lines.len()
+    }
+
+    fn get_styled_lines(&self) -> Vec<Line<'static>> {
         if self.log_lines.is_empty() {
-            return vec![ListItem::new("No log content available")];
+            return vec![Line::from("No log content available")];
         }
 
-        let content_height = area_height.saturating_sub(4); // Account for borders and header
-
-        // Calculate the visible window based on scroll offset
-        let visible_end = (self.scroll_offset + 1).min(self.log_lines.len());
-        let visible_start = visible_end.saturating_sub(content_height);
-
-        self.log_lines[visible_start..visible_end]
+        self.log_lines
             .iter()
             .enumerate()
             .map(|(i, line)| {
-                let line_number = visible_start + i + 1;
-                let display_line = if line.len() > 100 {
-                    format!("{line_number}: {}...", &line[..97])
+                let content = if line.len() > 100 {
+                    format!("{}...", &line[..97])
                 } else {
-                    format!("{line_number}: {line}")
+                    line.to_string()
                 };
 
-                // Highlight the current line (the line at scroll_offset)
-                if visible_start + i == self.scroll_offset {
-                    ListItem::new(display_line).style(Style::default().bg(Color::DarkGray))
+                // Highlight the current line
+                if i == self.scroll_offset {
+                    Line::from(vec![Span::styled(
+                        content,
+                        Style::default().bg(Color::DarkGray),
+                    )])
                 } else {
-                    ListItem::new(display_line)
+                    Line::from(vec![Span::raw(content)])
                 }
             })
             .collect()
+    }
+
+    fn calculate_scroll_offset(&self, viewport_height: u16) -> u16 {
+        // Calculate proper scroll offset to keep the current line visible
+        let content_height = viewport_height.saturating_sub(2); // Account for borders
+
+        if self.scroll_offset == 0 {
+            return 0;
+        }
+
+        // If we're near the bottom, adjust scroll to show the current line
+        let max_visible_offset = self
+            .scroll_offset
+            .saturating_sub(content_height as usize / 2);
+        max_visible_offset as u16
     }
 }
 
@@ -138,15 +149,18 @@ impl<'a> Widget for LogViewerWidget<'a> {
         header.render(layout[0], buf);
 
         // Content
-        let display_lines = self.get_display_lines(layout[1].height as usize);
-        let log_list = List::new(display_lines)
+        let styled_lines = self.get_styled_lines();
+        let scroll_offset = self.calculate_scroll_offset(layout[1].height);
+        let log_paragraph = Paragraph::new(styled_lines)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title(format!(" {} lines total ", self.log_lines.len())),
             )
-            .style(Style::default());
-        log_list.render(layout[1], buf);
+            .style(Style::default())
+            .wrap(Wrap { trim: false })
+            .scroll((scroll_offset, 0));
+        log_paragraph.render(layout[1], buf);
 
         // Footer with key bindings
         let footer_text = " j/k:Scroll  gg/G:Top/Bottom  Esc:Back ";

@@ -196,12 +196,8 @@ impl TuiApp {
                 Ok(file) => {
                     let reader = BufReader::new(file);
                     self.log_lines_count = reader.lines().count();
-                    // Start at the bottom of the log (most recent content)
-                    if self.log_lines_count > 0 {
-                        self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
-                    } else {
-                        self.log_scroll_offset = 0;
-                    }
+                    // Start at the beginning of the log
+                    self.log_scroll_offset = 0;
                 }
                 Err(_) => {
                     self.log_lines_count = 1; // Error message
@@ -224,7 +220,7 @@ impl TuiApp {
     }
 
     /// Render the TUI
-    pub fn render(&self, frame: &mut Frame) {
+    pub fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         match self.view_mode {
             ViewMode::TaskList => self.render_task_list(frame, area),
@@ -242,10 +238,22 @@ impl TuiApp {
     }
 
     /// Render log view widget
-    fn render_log_view(&self, frame: &mut Frame, area: Rect) {
+    fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
         if !self.tasks.is_empty() && self.selected_index < self.tasks.len() {
             let selected_task = &self.tasks[self.selected_index];
+            // Create a new widget each time to reload log content
             let widget = LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
+
+            // Update the internal line count for proper scrolling
+            let new_lines_count = widget.get_lines_count();
+            if new_lines_count != self.log_lines_count {
+                self.log_lines_count = new_lines_count;
+                // If we were at the bottom, stay at the bottom
+                if self.log_scroll_offset >= self.log_lines_count.saturating_sub(2) {
+                    self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
+                }
+            }
+
             frame.render_widget(widget, area);
         }
     }

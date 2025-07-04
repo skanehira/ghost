@@ -8,7 +8,7 @@ use std::fs;
 /// Helper function to load expected output from file
 fn load_expected(filename: &str) -> String {
     let path = format!("tests/expected/{filename}");
-    fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read expected file: {}", path))
+    fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read expected file: {path}"))
 }
 
 /// Helper function to create test tasks
@@ -451,4 +451,69 @@ fn test_table_scroll_display() {
     // Should not show first few tasks due to scrolling
     assert!(!buffer_output.contains("task_000"));
     assert!(!buffer_output.contains("task_001"));
+}
+
+#[test]
+fn test_log_viewer_updates_on_file_change() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    writeln!(temp_file, "Initial log line 1").unwrap();
+    writeln!(temp_file, "Initial log line 2").unwrap();
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    // First render to initialize log view
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Initial line count should be 2
+    assert_eq!(app.log_lines_count, 2);
+
+    // Write more lines to the file
+    writeln!(temp_file, "New log line 3").unwrap();
+    writeln!(temp_file, "New log line 4").unwrap();
+    writeln!(temp_file, "New log line 5").unwrap();
+    temp_file.flush().unwrap();
+
+    // Render again to reload the file
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Line count should now be 5
+    assert_eq!(app.log_lines_count, 5);
+
+    // Verify the log viewer shows the updated line count
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    assert!(buffer_output.contains("5 lines total"));
 }
