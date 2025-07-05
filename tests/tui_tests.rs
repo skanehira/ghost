@@ -792,3 +792,154 @@ fn test_log_viewer_memory_limit() {
         assert!(buffer_output.contains("Log line") || buffer_output.contains("lines total"));
     }
 }
+
+#[test]
+fn test_log_viewer_auto_updates_on_file_change() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use std::thread;
+    use std::time::Duration;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    writeln!(temp_file, "Initial log line 1").unwrap();
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First render
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    assert_eq!(app.log_lines_count, 1);
+
+    // Write more lines in background
+    let temp_file_path = temp_file.path().to_string_lossy().to_string();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(100));
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&temp_file_path)
+            .unwrap();
+        writeln!(file, "New log line 2").unwrap();
+        writeln!(file, "New log line 3").unwrap();
+        file.flush().unwrap();
+    });
+
+    // Wait a bit for background thread to write
+    thread::sleep(Duration::from_millis(200));
+
+    // Render should automatically pick up new lines
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Should have updated to 3 lines
+    assert_eq!(app.log_lines_count, 3);
+}
+
+#[test]
+fn test_log_viewer_incremental_update() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary log file with many lines
+    let mut temp_file = NamedTempFile::new().unwrap();
+    for i in 0..100 {
+        writeln!(temp_file, "Initial log line {i}").unwrap();
+    }
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First render
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    assert_eq!(app.log_lines_count, 100);
+
+    // Add new lines
+    writeln!(temp_file, "New log line 100").unwrap();
+    writeln!(temp_file, "New log line 101").unwrap();
+    writeln!(temp_file, "New log line 102").unwrap();
+    temp_file.flush().unwrap();
+
+    // Second render should incrementally update
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Should have 103 lines now
+    assert_eq!(app.log_lines_count, 103);
+
+    // Verify that the new lines are visible when scrolled to bottom
+    app.log_scroll_offset = app.log_lines_count.saturating_sub(1);
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+
+    // Debug output
+    if !buffer_output.contains("New log line") {
+        println!("Buffer output: {buffer_output}");
+        println!("Log lines count: {}", app.log_lines_count);
+        println!("Scroll offset: {}", app.log_scroll_offset);
+    }
+
+    assert!(buffer_output.contains("New log line") || buffer_output.contains("103 lines total"));
+}

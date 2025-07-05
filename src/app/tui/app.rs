@@ -16,6 +16,13 @@ use crate::app::storage::task_repository;
 struct LogCache {
     content: Vec<String>,
     last_modified: SystemTime,
+    file_size: u64,
+}
+
+enum UpdateStrategy {
+    FullReload,
+    Incremental(u64), // previous file size
+    UseCache,
 }
 
 pub struct TuiApp {
@@ -249,48 +256,88 @@ impl TuiApp {
             let selected_task = &self.tasks[self.selected_index];
             let log_path = &selected_task.log_path;
 
-            // Check if we need to reload the file
-            let should_reload = if let Ok(metadata) = fs::metadata(log_path) {
+            // Check if we need to reload or incrementally update the file
+            let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
                 let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                let file_size = metadata.len();
 
                 if let Some(cache) = self.log_cache.get(log_path) {
-                    // Check if file has been modified since last read
-                    modified > cache.last_modified
+                    if modified > cache.last_modified {
+                        if file_size > cache.file_size {
+                            // File grew, use incremental update
+                            UpdateStrategy::Incremental(cache.file_size)
+                        } else {
+                            // File changed in other ways, full reload
+                            UpdateStrategy::FullReload
+                        }
+                    } else {
+                        // No changes
+                        UpdateStrategy::UseCache
+                    }
                 } else {
                     // No cache exists, need to load
-                    true
+                    UpdateStrategy::FullReload
                 }
             } else {
                 // File doesn't exist or can't read metadata
-                false
+                UpdateStrategy::UseCache
             };
 
-            let widget = if should_reload {
-                // Load the file and update cache
-                let widget =
-                    LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
+            let widget = match update_strategy {
+                UpdateStrategy::FullReload => {
+                    // Load the file and update cache
+                    let widget =
+                        LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
 
-                // Store in cache
-                if let Ok(metadata) = fs::metadata(log_path) {
-                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    self.log_cache.insert(
-                        log_path.clone(),
-                        LogCache {
-                            content: widget.get_lines().to_vec(),
-                            last_modified: modified,
-                        },
-                    );
+                    // Store in cache
+                    if let Ok(metadata) = fs::metadata(log_path) {
+                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        self.log_cache.insert(
+                            log_path.clone(),
+                            LogCache {
+                                content: widget.get_lines().to_vec(),
+                                last_modified: modified,
+                                file_size: metadata.len(),
+                            },
+                        );
+                    }
+
+                    widget
                 }
+                UpdateStrategy::Incremental(previous_size) => {
+                    // Use incremental update
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    let widget = LogViewerWidget::load_incremental_content(
+                        selected_task,
+                        self.log_scroll_offset,
+                        cache.content.clone(),
+                        previous_size,
+                    );
 
-                widget
-            } else {
-                // Use cached content
-                let cache = self.log_cache.get(log_path).unwrap();
-                LogViewerWidget::with_cached_content(
-                    selected_task,
-                    self.log_scroll_offset,
-                    cache.content.clone(),
-                )
+                    // Update cache
+                    if let Ok(metadata) = fs::metadata(log_path) {
+                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        self.log_cache.insert(
+                            log_path.clone(),
+                            LogCache {
+                                content: widget.get_lines().to_vec(),
+                                last_modified: modified,
+                                file_size: metadata.len(),
+                            },
+                        );
+                    }
+
+                    widget
+                }
+                UpdateStrategy::UseCache => {
+                    // Use cached content
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    LogViewerWidget::with_cached_content(
+                        selected_task,
+                        self.log_scroll_offset,
+                        cache.content.clone(),
+                    )
+                }
             };
 
             // Update the internal line count for proper scrolling

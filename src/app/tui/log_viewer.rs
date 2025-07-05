@@ -51,6 +51,21 @@ impl<'a> LogViewerWidget<'a> {
         }
     }
 
+    pub fn load_incremental_content(
+        task: &'a Task,
+        scroll_offset: usize,
+        existing_content: Vec<String>,
+        file_size: u64,
+    ) -> Self {
+        let mut viewer = Self {
+            task,
+            log_lines: existing_content,
+            scroll_offset,
+        };
+        viewer.append_new_lines(file_size);
+        viewer
+    }
+
     fn load_log_content(&mut self) {
         use std::collections::VecDeque;
 
@@ -79,6 +94,38 @@ impl<'a> LogViewerWidget<'a> {
             }
             Err(_) => {
                 self.log_lines = vec!["Log file not found or cannot be read".to_string()];
+            }
+        }
+    }
+
+    fn append_new_lines(&mut self, previous_file_size: u64) {
+        use std::io::{BufRead, BufReader, Seek, SeekFrom};
+
+        match fs::File::open(&self.task.log_path) {
+            Ok(mut file) => {
+                // Seek to the previous end of file
+                if file.seek(SeekFrom::Start(previous_file_size)).is_ok() {
+                    let reader = BufReader::new(file);
+
+                    // Read only new lines
+                    for line_result in reader.lines() {
+                        match line_result {
+                            Ok(line) => {
+                                self.log_lines.push(line);
+                                // Keep only the most recent lines
+                                if self.log_lines.len() > MAX_LINES_IN_MEMORY {
+                                    self.log_lines.remove(0);
+                                }
+                            }
+                            Err(_) => {
+                                self.log_lines.push("Error reading line".to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                // File error, don't update
             }
         }
     }
