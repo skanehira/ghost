@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751473267142,
+  "lastUpdate": 1751678394277,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -359,6 +359,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.94,
             "range": "± 0.13",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "963aaff4ecea54ef2fef477fc0c48cd4f34297cf",
+          "message": "fix: use inline format strings throughout codebase\n\n- Replace format\\!(\"text {}\", var) with format\\!(\"text {var}\")\n- Update println\\!, writeln\\! to use embedded expressions\n- Follow Rust formatting best practices in CLAUDE.md\n- Improve code readability and consistency",
+          "timestamp": "2025-07-05T10:16:45+09:00",
+          "tree_id": "9bf5ad48684ea75e30a96963905fa96bb94514bd",
+          "url": "https://github.com/skanehira/ghost/commit/963aaff4ecea54ef2fef477fc0c48cd4f34297cf"
+        },
+        "date": 1751678393917,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.96,
+            "range": "± 0.20",
             "unit": "ns/iter"
           }
         ]
