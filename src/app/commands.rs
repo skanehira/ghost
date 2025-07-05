@@ -96,7 +96,8 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
     };
     storage::update_task_status(&conn, task_id, status, None)?;
 
-    println!("Process {} ({}) has been {}", task_id, task.pid, status);
+    let pid = task.pid;
+    println!("Process {task_id} ({pid}) has been {status}");
 
     Ok(())
 }

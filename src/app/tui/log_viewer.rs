@@ -132,7 +132,8 @@ impl<'a> LogViewerWidget<'a> {
             .map(|(relative_idx, line)| {
                 let absolute_idx = start_idx + relative_idx;
                 let content = if line.len() > 100 {
-                    format!("{}...", &line[..97])
+                    let truncated = &line[..97];
+                    format!("{truncated}...")
                 } else {
                     line.to_string()
                 };
@@ -197,11 +198,10 @@ impl<'a> Widget for LogViewerWidget<'a> {
         let styled_lines = self.get_styled_lines(layout[1].height);
         let scroll_offset = self.calculate_scroll_offset(layout[1].height);
         let log_paragraph = Paragraph::new(styled_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(format!(" {} lines total ", self.log_lines.len())),
-            )
+            .block(Block::default().borders(Borders::ALL).title({
+                let lines_len = self.log_lines.len();
+                format!(" {lines_len} lines total ")
+            }))
             .style(Style::default())
             .wrap(Wrap { trim: false })
             .scroll((scroll_offset, 0));

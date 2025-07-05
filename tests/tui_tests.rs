@@ -528,7 +528,7 @@ fn test_log_viewer_caches_file_content() {
     // Create a large temporary log file
     let mut temp_file = NamedTempFile::new().unwrap();
     for i in 0..10000 {
-        writeln!(temp_file, "Log line {}", i).unwrap();
+        writeln!(temp_file, "Log line {i}").unwrap();
     }
     temp_file.flush().unwrap();
 
@@ -657,7 +657,7 @@ fn test_log_viewer_only_processes_visible_lines() {
     // Create a large temporary log file
     let mut temp_file = NamedTempFile::new().unwrap();
     for i in 0..100000 {
-        writeln!(temp_file, "Log line {}", i).unwrap();
+        writeln!(temp_file, "Log line {i}").unwrap();
     }
     temp_file.flush().unwrap();
 
@@ -784,7 +784,7 @@ fn test_log_viewer_memory_limit() {
 
         // Debug output
         if !buffer_output.contains("Log line") {
-            println!("Buffer output: {}", buffer_output);
+            println!("Buffer output: {buffer_output}");
             println!("Log lines count: {}", app.log_lines_count);
             println!("Scroll offset: {}", app.log_scroll_offset);
         }

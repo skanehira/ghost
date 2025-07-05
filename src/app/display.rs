@@ -35,10 +35,14 @@ fn print_table_header() {
 
 /// Display detailed information about a single task
 pub fn print_task_details(task: &Task) {
-    println!("Task: {}", task.id);
-    println!("PID: {}", task.pid);
-    println!("Status: {}", task.status);
-    println!("Command: {}", format_command_full(&task.command));
+    let task_id = &task.id;
+    println!("Task: {task_id}");
+    let pid = task.pid;
+    println!("PID: {pid}");
+    let status = &task.status;
+    println!("Status: {status}");
+    let command = format_command_full(&task.command);
+    println!("Command: {command}");
 
     if let Some(ref cwd) = task.cwd {
         println!("Working directory: {cwd}");
@@ -60,7 +64,8 @@ pub fn print_task_details(task: &Task) {
         println!("Exit code: {exit_code}");
     }
 
-    println!("Log file: {}", task.log_path);
+    let log_path = &task.log_path;
+    println!("Log file: {log_path}");
 }
 
 /// Display information about a started process

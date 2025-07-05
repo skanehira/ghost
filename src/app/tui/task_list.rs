@@ -100,7 +100,8 @@ impl<'a> TaskListWidget<'a> {
 
 impl<'a> Widget for TaskListWidget<'a> {
     fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
-        let title = format!(" Ghost TUI v0.0.1 [Filter: {}] ", self.filter_name());
+        let filter_name = self.filter_name();
+        let title = format!(" Ghost TUI v0.0.1 [Filter: {filter_name}] ");
 
         // Create main block
         let block = Block::default().borders(Borders::ALL).title(title);
@@ -194,12 +195,18 @@ impl<'a> TaskListWidget<'a> {
 
                     let status_style = self.status_style(&task.status);
 
+                    let task_id_short = &task.id[0..8];
+                    let pid = task.pid;
+                    let status = task.status.as_str();
+                    let timestamp = self.format_timestamp(task.started_at);
+                    let command = self.parse_command(&task.command);
+
                     Row::new(vec![
-                        Cell::from(format!(" {}", &task.id[0..8])), // Keep short ID
-                        Cell::from(format!(" {}", task.pid)),
-                        Cell::from(format!(" {}", task.status.as_str())).style(status_style),
-                        Cell::from(format!(" {}", self.format_timestamp(task.started_at))),
-                        Cell::from(format!(" {}", self.parse_command(&task.command))),
+                        Cell::from(format!(" {task_id_short}")), // Keep short ID
+                        Cell::from(format!(" {pid}")),
+                        Cell::from(format!(" {status}")).style(status_style),
+                        Cell::from(format!(" {timestamp}")),
+                        Cell::from(format!(" {command}")),
                     ])
                     .style(style)
                 })

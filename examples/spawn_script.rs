@@ -25,7 +25,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Process started: ID={}, PID={}",
         process_info.id, process_info.pid
     );
-    println!("Log file: {}", process_info.log_path.display());
+    let log_path = process_info.log_path.display();
+    println!("Log file: {log_path}");
 
     print_status(process_info.pid);
 
