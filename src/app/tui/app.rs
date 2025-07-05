@@ -1,6 +1,9 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{Frame, layout::Rect};
 use rusqlite::Connection;
+use std::collections::HashMap;
+use std::fs;
+use std::time::SystemTime;
 
 use super::log_viewer::LogViewerWidget;
 use super::{TaskFilter, ViewMode};
@@ -8,6 +11,12 @@ use crate::app::config::Config;
 use crate::app::error::Result;
 use crate::app::storage::task::Task;
 use crate::app::storage::task_repository;
+
+/// Cache for log file content
+struct LogCache {
+    content: Vec<String>,
+    last_modified: SystemTime,
+}
 
 pub struct TuiApp {
     pub tasks: Vec<Task>,
@@ -19,6 +28,7 @@ pub struct TuiApp {
     pub log_lines_count: usize,
     pub table_scroll_offset: usize,
     conn: Connection,
+    log_cache: HashMap<String, LogCache>,
 }
 
 impl TuiApp {
@@ -36,6 +46,7 @@ impl TuiApp {
             log_lines_count: 0,
             table_scroll_offset: 0,
             conn,
+            log_cache: HashMap::new(),
         })
     }
 
@@ -185,25 +196,20 @@ impl TuiApp {
     }
 
     fn initialize_log_view(&mut self) {
-        use std::fs;
-        use std::io::{BufRead, BufReader};
-
         if !self.tasks.is_empty() && self.selected_index < self.tasks.len() {
             let selected_task = &self.tasks[self.selected_index];
+            let log_path = &selected_task.log_path;
 
-            // Count lines in log file
-            match fs::File::open(&selected_task.log_path) {
-                Ok(file) => {
-                    let reader = BufReader::new(file);
-                    self.log_lines_count = reader.lines().count();
-                    // Start at the beginning of the log
-                    self.log_scroll_offset = 0;
-                }
-                Err(_) => {
-                    self.log_lines_count = 1; // Error message
-                    self.log_scroll_offset = 0;
-                }
+            // Check cache first
+            if let Some(cache) = self.log_cache.get(log_path) {
+                self.log_lines_count = cache.content.len();
+            } else {
+                // If not in cache, we'll load it on first render
+                self.log_lines_count = 0;
             }
+
+            // Start at the beginning of the log
+            self.log_scroll_offset = 0;
         }
     }
 
@@ -241,8 +247,51 @@ impl TuiApp {
     fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
         if !self.tasks.is_empty() && self.selected_index < self.tasks.len() {
             let selected_task = &self.tasks[self.selected_index];
-            // Create a new widget each time to reload log content
-            let widget = LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
+            let log_path = &selected_task.log_path;
+
+            // Check if we need to reload the file
+            let should_reload = if let Ok(metadata) = fs::metadata(log_path) {
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+
+                if let Some(cache) = self.log_cache.get(log_path) {
+                    // Check if file has been modified since last read
+                    modified > cache.last_modified
+                } else {
+                    // No cache exists, need to load
+                    true
+                }
+            } else {
+                // File doesn't exist or can't read metadata
+                false
+            };
+
+            let widget = if should_reload {
+                // Load the file and update cache
+                let widget =
+                    LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
+
+                // Store in cache
+                if let Ok(metadata) = fs::metadata(log_path) {
+                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                    self.log_cache.insert(
+                        log_path.clone(),
+                        LogCache {
+                            content: widget.get_lines().to_vec(),
+                            last_modified: modified,
+                        },
+                    );
+                }
+
+                widget
+            } else {
+                // Use cached content
+                let cache = self.log_cache.get(log_path).unwrap();
+                LogViewerWidget::with_cached_content(
+                    selected_task,
+                    self.log_scroll_offset,
+                    cache.content.clone(),
+                )
+            };
 
             // Update the internal line count for proper scrolling
             let new_lines_count = widget.get_lines_count();

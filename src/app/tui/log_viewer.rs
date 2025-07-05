@@ -9,6 +9,9 @@ use std::io::{BufRead, BufReader};
 
 use crate::app::storage::task::Task;
 
+/// Maximum number of lines to keep in memory
+const MAX_LINES_IN_MEMORY: usize = 10_000;
+
 pub struct LogViewerWidget<'a> {
     task: &'a Task,
     log_lines: Vec<String>,
@@ -36,14 +39,43 @@ impl<'a> LogViewerWidget<'a> {
         viewer
     }
 
+    pub fn with_cached_content(
+        task: &'a Task,
+        scroll_offset: usize,
+        log_lines: Vec<String>,
+    ) -> Self {
+        Self {
+            task,
+            log_lines,
+            scroll_offset,
+        }
+    }
+
     fn load_log_content(&mut self) {
+        use std::collections::VecDeque;
+
         match fs::File::open(&self.task.log_path) {
             Ok(file) => {
                 let reader = BufReader::new(file);
-                self.log_lines = reader
-                    .lines()
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap_or_else(|_| vec!["Error reading log file".to_string()]);
+                let mut lines = VecDeque::new();
+
+                // Read lines with memory limit
+                for line_result in reader.lines() {
+                    match line_result {
+                        Ok(line) => {
+                            lines.push_back(line);
+                            // Keep only the most recent lines
+                            if lines.len() > MAX_LINES_IN_MEMORY {
+                                lines.pop_front();
+                            }
+                        }
+                        Err(_) => {
+                            lines.push_back("Error reading line".to_string());
+                        }
+                    }
+                }
+
+                self.log_lines = lines.into_iter().collect();
             }
             Err(_) => {
                 self.log_lines = vec!["Log file not found or cannot be read".to_string()];
@@ -77,15 +109,28 @@ impl<'a> LogViewerWidget<'a> {
         self.log_lines.len()
     }
 
-    fn get_styled_lines(&self) -> Vec<Line<'static>> {
+    pub fn get_lines(&self) -> &[String] {
+        &self.log_lines
+    }
+
+    fn get_styled_lines(&self, viewport_height: u16) -> Vec<Line<'static>> {
         if self.log_lines.is_empty() {
             return vec![Line::from("No log content available")];
         }
 
-        self.log_lines
+        // Calculate visible range based on scroll position
+        let content_height = viewport_height.saturating_sub(2) as usize; // Account for borders
+        let scroll_position = self.calculate_scroll_offset(viewport_height) as usize;
+
+        let start_idx = scroll_position;
+        let end_idx = (start_idx + content_height).min(self.log_lines.len());
+
+        // Only process visible lines
+        self.log_lines[start_idx..end_idx]
             .iter()
             .enumerate()
-            .map(|(i, line)| {
+            .map(|(relative_idx, line)| {
+                let absolute_idx = start_idx + relative_idx;
                 let content = if line.len() > 100 {
                     format!("{}...", &line[..97])
                 } else {
@@ -93,7 +138,7 @@ impl<'a> LogViewerWidget<'a> {
                 };
 
                 // Highlight the current line
-                if i == self.scroll_offset {
+                if absolute_idx == self.scroll_offset {
                     Line::from(vec![Span::styled(
                         content,
                         Style::default().bg(Color::DarkGray),
@@ -149,7 +194,7 @@ impl<'a> Widget for LogViewerWidget<'a> {
         header.render(layout[0], buf);
 
         // Content
-        let styled_lines = self.get_styled_lines();
+        let styled_lines = self.get_styled_lines(layout[1].height);
         let scroll_offset = self.calculate_scroll_offset(layout[1].height);
         let log_paragraph = Paragraph::new(styled_lines)
             .block(

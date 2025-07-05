@@ -67,3 +67,11 @@ GitHub Actions workflows are configured for:
 - Unit tests use standard `cargo test`
 - CI uses `cargo-nextest` for better test output and performance
 - Code coverage is generated with `cargo-llvm-cov` on Linux CI runs
+
+## Rust Formatting Rules
+
+- ALWAYS use inline format strings with embedded expressions when possible
+- Use `format!("text {variable}")` instead of `format!("text {}", variable)`
+- Use `println!("value: {x}")` instead of `println!("value: {}", x)`
+- Use `writeln!(file, "Log line {i}")` instead of `writeln!(file, "Log line {}", i)`
+- This applies to all formatting macros: `format!`, `print!`, `println!`, `write!`, `writeln!`, `eprintln!`, etc.

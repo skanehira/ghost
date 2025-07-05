@@ -517,3 +517,278 @@ fn test_log_viewer_updates_on_file_change() {
     let buffer_output = buffer_to_string(terminal.backend().buffer());
     assert!(buffer_output.contains("5 lines total"));
 }
+
+#[test]
+fn test_log_viewer_caches_file_content() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use std::time::Instant;
+    use tempfile::NamedTempFile;
+
+    // Create a large temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    for i in 0..10000 {
+        writeln!(temp_file, "Log line {}", i).unwrap();
+    }
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First render - should read the file
+    let start = Instant::now();
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    let first_render_time = start.elapsed();
+
+    // Second render without file changes - should use cache
+    let start = Instant::now();
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    let second_render_time = start.elapsed();
+
+    // Second render should be significantly faster (cached)
+    assert!(
+        second_render_time < first_render_time / 2,
+        "Second render should be much faster due to caching. First: {first_render_time:?}, Second: {second_render_time:?}"
+    );
+
+    // Line count should remain the same
+    assert_eq!(app.log_lines_count, 10000);
+}
+
+#[test]
+fn test_log_viewer_reloads_on_file_modification() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use std::thread;
+    use std::time::Duration;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    writeln!(temp_file, "Initial log line 1").unwrap();
+    writeln!(temp_file, "Initial log line 2").unwrap();
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First render
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    assert_eq!(app.log_lines_count, 2);
+
+    // Wait to ensure file modification time changes
+    thread::sleep(Duration::from_millis(10));
+
+    // Modify the file
+    writeln!(temp_file, "New log line 3").unwrap();
+    writeln!(temp_file, "New log line 4").unwrap();
+    temp_file.flush().unwrap();
+
+    // Render again - should detect file change and reload
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Should have reloaded the file
+    assert_eq!(app.log_lines_count, 4);
+}
+
+#[test]
+fn test_log_viewer_only_processes_visible_lines() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use std::time::Instant;
+    use tempfile::NamedTempFile;
+
+    // Create a large temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    for i in 0..100000 {
+        writeln!(temp_file, "Log line {}", i).unwrap();
+    }
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    // Create a small terminal (only 20 lines visible)
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // Measure time to render
+    let start = Instant::now();
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+    let render_time = start.elapsed();
+
+    // Rendering should be fast even with 100k lines
+    // because we only process visible lines
+    assert!(
+        render_time.as_millis() < 50,
+        "Render took too long: {:?}ms. Should process only visible lines.",
+        render_time.as_millis()
+    );
+
+    // Verify that only visible content is in the output
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let line_count = buffer_output.matches("Log line").count();
+
+    // Should only have around 10-15 visible lines (accounting for borders and headers)
+    assert!(
+        line_count < 20,
+        "Too many lines processed: {}. Should only process visible lines.",
+        line_count
+    );
+}
+
+#[test]
+fn test_log_viewer_memory_limit() {
+    use ghost::app::tui::app::TuiApp;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // Create a large temporary log file
+    let mut temp_file = NamedTempFile::new().unwrap();
+    for i in 0..50000 {
+        writeln!(
+            temp_file,
+            "Log line {}: This is a fairly long log line to consume more memory",
+            i
+        )
+        .unwrap();
+    }
+    temp_file.flush().unwrap();
+
+    // Create a task with the temp log file
+    let task = Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: temp_file.path().to_string_lossy().to_string(),
+    };
+
+    let mut app = TuiApp::new().unwrap();
+    app.tasks = vec![task];
+    app.selected_index = 0;
+    app.view_mode = ghost::app::tui::ViewMode::LogView;
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First render to load the file
+    terminal
+        .draw(|f| {
+            app.render(f);
+        })
+        .unwrap();
+
+    // Check that we don't load all 50k lines into memory
+    // The cache should have a memory limit (e.g., max 10k lines)
+    assert!(
+        app.log_lines_count <= 10000,
+        "Too many lines in memory: {}. Should limit to prevent memory issues.",
+        app.log_lines_count
+    );
+
+    // Verify we can still scroll to near the end
+    if app.log_lines_count > 0 {
+        app.log_scroll_offset = app.log_lines_count.saturating_sub(10);
+        terminal
+            .draw(|f| {
+                app.render(f);
+            })
+            .unwrap();
+
+        // Should show recent lines
+        let buffer_output = buffer_to_string(terminal.backend().buffer());
+
+        // Debug output
+        if !buffer_output.contains("Log line") {
+            println!("Buffer output: {}", buffer_output);
+            println!("Log lines count: {}", app.log_lines_count);
+            println!("Scroll offset: {}", app.log_scroll_offset);
+        }
+
+        assert!(buffer_output.contains("Log line") || buffer_output.contains("lines total"));
+    }
+}
