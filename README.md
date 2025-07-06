@@ -225,57 +225,6 @@ $ ghost tui
 - `Page Up`/`Page Down`: Scroll by page
 - `Esc` or `q`: Return to task list
 
-### Examples
-
-Here are some practical examples of using Ghost:
-
-```bash
-# Start a web server in the background
-$ ghost run python -m http.server 8080
-Started background process:
-  Task ID: d4e5f6g7-h8i9-0123-defg-456789012345
-  PID: 12348
-  Log file: /Users/user/Library/Application Support/ghost/logs/d4e5f6g7-h8i9-0123-defg-456789012345.log
-
-# Run tests while working on other things
-$ ghost run npm test
-Started background process:
-  Task ID: e5f6g7h8-i9j0-1234-efgh-567890123456
-  PID: 12349
-  Log file: /Users/user/Library/Application Support/ghost/logs/e5f6g7h8-i9j0-1234-efgh-567890123456.log
-
-# Start a long-running backup process
-$ ghost run rsync -av /home/user/ /backup/
-Started background process:
-  Task ID: f6g7h8i9-j0k1-2345-fghi-678901234567
-  PID: 12350
-  Log file: /Users/user/Library/Application Support/ghost/logs/f6g7h8i9-j0k1-2345-fghi-678901234567.log
-
-# Run a development server with environment variables
-$ ghost run --env NODE_ENV=development --env PORT=3000 --cwd ~/my-app npm run dev
-Started background process:
-  Task ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-  PID: 12351
-  Log file: /Users/user/Library/Application Support/ghost/logs/a1b2c3d4-e5f6-7890-abcd-ef1234567890.log
-
-# Run multiple commands in parallel
-$ ghost run --cwd ~/project1 npm run build
-$ ghost run --cwd ~/project2 cargo build --release
-$ ghost run --cwd ~/project3 go build
-
-# Monitor all running tasks in TUI
-$ ghost tui
-```
-
-### Task Management
-
-Each background task gets:
-- **Unique Task ID**: Used to reference the task in other commands
-- **Process ID (PID)**: The actual system process ID
-- **Log File**: Captures stdout and stderr output
-- **Status Tracking**: Monitors running, exited, or killed states
-- **Timestamps**: Records start and finish times
-
 ### Key Features
 
 - **No Daemon Required**: Each command is self-contained
@@ -294,8 +243,8 @@ Each background task gets:
 #### Default Locations
 
 **Linux:**
-- Data: `~/.local/share/ghost/`
-- Logs: `~/.local/share/ghost/logs/`
+- Data: `$XDG_DATA_HOME`/ghost or `$HOME`/.local/share/ghost
+- Logs: `$XDG_DATA_HOME`/ghost/logs or `$HOME`/.local/share/ghost/logs
 
 **macOS:**
 - Data: `~/Library/Application Support/ghost/`

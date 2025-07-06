@@ -86,11 +86,6 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
-    if cfg!(windows) {
-        eprintln!("ghost does not support Windows yet.");
-        std::process::exit(1);
-    }
-
     let cli = Cli::parse();
 
     let result = match cli.command {

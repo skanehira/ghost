@@ -45,12 +45,9 @@ impl Config {
 
 /// Get the default data directory for Ghost
 pub fn get_data_dir() -> PathBuf {
-    if cfg!(windows) {
-        dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."))
-    } else {
-        dirs::data_dir().unwrap_or_else(|| PathBuf::from("."))
-    }
-    .join("ghost")
+    dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("ghost")
 }
 
 /// Get the default log directory
