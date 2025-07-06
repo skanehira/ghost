@@ -12,14 +12,16 @@ pub fn print_task_list(tasks: &[Task]) {
     for task in tasks {
         let command_display = format_command_truncated(&task.command, 30);
         let started = format_timestamp(task.started_at, "%Y-%m-%d %H:%M");
+        let cwd_display = task.cwd.as_deref().unwrap_or("-");
 
         println!(
-            "{:<36} {:<8} {:<10} {:<20} {:<30}",
+            "{:<36} {:<8} {:<10} {:<20} {:<30} {:<30}",
             &task.id,
             task.pid,
             task.status.as_str(),
             started,
-            command_display
+            command_display,
+            truncate_string(cwd_display, 30)
         );
     }
 }
@@ -27,10 +29,10 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<36} {:<8} {:<10} {:<20} {:<30}",
-        "Task ID", "PID", "Status", "Started", "Command"
+        "{:<36} {:<8} {:<10} {:<20} {:<30} {:<30}",
+        "Task ID", "PID", "Status", "Started", "Command", "Directory"
     );
-    println!("{}", "-".repeat(104)); // 36+8+10+20+30 = 104
+    println!("{}", "-".repeat(134)); // 36+8+10+20+30+30 = 134
 }
 
 /// Display detailed information about a single task
