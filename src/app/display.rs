@@ -15,7 +15,11 @@ pub fn print_task_list(tasks: &[Task]) {
 
         println!(
             "{:<36} {:<8} {:<10} {:<20} {:<30}",
-            &task.id, task.pid, task.status, started, command_display
+            &task.id,
+            task.pid,
+            task.status.as_str(),
+            started,
+            command_display
         );
     }
 }
@@ -26,7 +30,7 @@ fn print_table_header() {
         "{:<36} {:<8} {:<10} {:<20} {:<30}",
         "Task ID", "PID", "Status", "Started", "Command"
     );
-    println!("{}", "-".repeat(110)); // Increased from 80 to accommodate full UUID
+    println!("{}", "-".repeat(104)); // 36+8+10+20+30 = 104
 }
 
 /// Display detailed information about a single task

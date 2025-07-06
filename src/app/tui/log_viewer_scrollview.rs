@@ -277,7 +277,7 @@ mod tests {
         let mut temp_file = NamedTempFile::new().unwrap();
         // Write more than MAX_LINES_IN_MEMORY lines
         for i in 0..15000 {
-            writeln!(temp_file, "Line {}", i).unwrap();
+            writeln!(temp_file, "Line {i}").unwrap();
         }
         temp_file.flush().unwrap();
 
