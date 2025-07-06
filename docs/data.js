@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751795630647,
+  "lastUpdate": 1751797190883,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -539,6 +539,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.13",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "c2b03fbc5170156a1260e8fc09fdfd96c41990c6",
+          "message": "fix: resolve clippy warning about literal format string\n\n- Fix println\\! format string to include 'Directory' in the format part\n- Move 'Directory' from arguments to format string",
+          "timestamp": "2025-07-06T19:04:46+09:00",
+          "tree_id": "65d4f16c7a33ac44d45011bb1d3f8571abb03445",
+          "url": "https://github.com/skanehira/ghost/commit/c2b03fbc5170156a1260e8fc09fdfd96c41990c6"
+        },
+        "date": 1751797190000,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.09",
             "unit": "ns/iter"
           }
         ]
