@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751811447036,
+  "lastUpdate": 1751819212469,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -599,6 +599,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.09",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "445495d00871f6926506668d8c2e0f36f42a33e3",
+          "message": "feat: implement Tab key to cycle through task filters in TUI\n\n- Add Tab key handler to cycle through All -> Running -> Exited -> Killed -> All\n- Reset selection when changing filters\n- Add test for Tab key filter cycling functionality\n- Update existing tests to use dynamic version from Cargo.toml",
+          "timestamp": "2025-07-07T01:24:53+09:00",
+          "tree_id": "1e40ed67ae5cb79e0829f1619630e5917a826725",
+          "url": "https://github.com/skanehira/ghost/commit/445495d00871f6926506668d8c2e0f36f42a33e3"
+        },
+        "date": 1751819212020,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.14",
             "unit": "ns/iter"
           }
         ]
