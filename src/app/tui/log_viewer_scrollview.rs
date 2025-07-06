@@ -170,8 +170,9 @@ impl StatefulWidget for LogViewerScrollWidget {
                 .set_symbol(symbols::line::VERTICAL_LEFT);
         }
 
-        // Create scroll view with content size
-        let mut scroll_view = ScrollView::new(content_size);
+        // Create scroll view with content size and hide scrollbars
+        let mut scroll_view = ScrollView::new(content_size)
+            .scrollbars_visibility(tui_scrollview::ScrollbarVisibility::Never);
 
         // Create line numbers paragraph
         let line_numbers: Vec<Line> = self
