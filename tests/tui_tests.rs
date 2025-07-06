@@ -1,14 +1,58 @@
+use ghost::app::config::Config;
 use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
 use ghost::app::tui::{App, TaskFilter};
 use pretty_assertions::assert_eq;
 use ratatui::{Terminal, backend::TestBackend};
 use std::fs;
+use tempfile::TempDir;
 
 /// Helper function to load expected output from file
 fn load_expected(filename: &str) -> String {
     let path = format!("tests/expected/{filename}");
     fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read expected file: {path}"))
+}
+
+/// Helper struct to manage test environment with temporary data directory
+struct TestEnvironment {
+    _temp_dir: TempDir,
+    original_env: Option<String>,
+    pub config: Config,
+}
+
+impl TestEnvironment {
+    fn new() -> Self {
+        // Save original GHOST_DATA_DIR if set
+        let original_env = std::env::var("GHOST_DATA_DIR").ok();
+
+        // Create temporary directory for test data
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+
+        // Set GHOST_DATA_DIR to temp directory
+        unsafe {
+            std::env::set_var("GHOST_DATA_DIR", temp_dir.path());
+        }
+
+        let config = Config::with_data_dir(temp_dir.path().to_path_buf());
+
+        Self {
+            _temp_dir: temp_dir,
+            original_env,
+            config,
+        }
+    }
+}
+
+impl Drop for TestEnvironment {
+    fn drop(&mut self) {
+        // Restore original GHOST_DATA_DIR or remove it
+        unsafe {
+            match &self.original_env {
+                Some(val) => std::env::set_var("GHOST_DATA_DIR", val),
+                None => std::env::remove_var("GHOST_DATA_DIR"),
+            }
+        }
+    }
 }
 
 /// Helper function to create test tasks
@@ -292,7 +336,8 @@ fn test_table_scroll_functionality() {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use ghost::app::tui::app::TuiApp;
 
-    let mut app = TuiApp::new().unwrap();
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
 
     // Create many tasks to enable scrolling
     let mut tasks = Vec::new();
@@ -390,7 +435,8 @@ fn test_task_termination_keys() {
     use ghost::app::storage::task_status::TaskStatus;
     use ghost::app::tui::app::TuiApp;
 
-    let mut app = TuiApp::new().unwrap();
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
 
     // Add a running task
     let tasks = vec![Task {
@@ -427,7 +473,8 @@ fn test_task_filter_cycling_with_tab() {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use ghost::app::tui::app::TuiApp;
 
-    let mut app = TuiApp::new().unwrap();
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
 
     // Add tasks with different statuses
     let tasks = vec![

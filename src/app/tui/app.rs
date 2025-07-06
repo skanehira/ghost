@@ -11,6 +11,7 @@ use super::table_state_scroll::TableScroll;
 use super::{TaskFilter, ViewMode};
 use crate::app::config::Config;
 use crate::app::error::Result;
+use crate::app::storage;
 use crate::app::storage::task::Task;
 use crate::app::storage::task_repository;
 
@@ -42,8 +43,25 @@ pub struct TuiApp {
 
 impl TuiApp {
     pub fn new() -> Result<Self> {
-        let config = Config::default();
-        let conn = rusqlite::Connection::open(&config.db_path)?;
+        let conn = storage::init_database()?;
+
+        Ok(Self {
+            tasks: Vec::new(),
+            table_scroll: TableScroll::new(),
+            filter: TaskFilter::All,
+            should_quit: false,
+            view_mode: ViewMode::TaskList,
+            log_scroll_offset: 0,
+            log_lines_count: 0,
+            log_scroll_state: ScrollViewState::default(),
+            conn,
+            log_cache: HashMap::new(),
+        })
+    }
+
+    /// Create a new TuiApp with a specific config (for testing)
+    pub fn new_with_config(config: Config) -> Result<Self> {
+        let conn = storage::init_database_with_config(Some(config))?;
 
         Ok(Self {
             tasks: Vec::new(),

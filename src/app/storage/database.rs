@@ -3,10 +3,15 @@ use rusqlite::Connection;
 
 /// Initialize the database and create tables if they don't exist
 pub fn init_database() -> Result<Connection> {
-    let config = crate::app::config::Config::default();
+    init_database_with_config(None)
+}
+
+/// Initialize the database with a specific config
+pub fn init_database_with_config(config: Option<crate::app::config::Config>) -> Result<Connection> {
+    let config = config.unwrap_or_default();
     config.ensure_directories()?;
 
-    let db_path = crate::app::config::get_db_path();
+    let db_path = config.get_db_path();
     let conn = Connection::open(db_path)?;
 
     // Enable WAL mode for better concurrency

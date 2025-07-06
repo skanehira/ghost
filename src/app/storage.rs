@@ -6,7 +6,7 @@ pub mod task_status;
 
 // Re-export for backward compatibility
 pub use cleanup::{cleanup_old_tasks, cleanup_tasks_by_criteria, get_cleanup_candidates};
-pub use database::init_database;
+pub use database::{init_database, init_database_with_config};
 pub use task::Task;
 pub use task_repository::{
     delete_task, get_task, get_tasks, get_tasks_with_process_check, insert_task, row_to_task,

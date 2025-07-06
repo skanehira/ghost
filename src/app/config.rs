@@ -41,6 +41,11 @@ impl Config {
         std::fs::create_dir_all(&self.log_dir)?;
         Ok(())
     }
+
+    /// Get the database path for this config
+    pub fn get_db_path(&self) -> PathBuf {
+        self.db_path.clone()
+    }
 }
 
 /// Get the default data directory for Ghost
