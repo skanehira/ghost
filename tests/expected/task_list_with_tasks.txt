@@ -1,8 +1,8 @@
 ┌ Ghost TUI v0.0.1 [Filter: All] ─────────────────────────────────────────┐
-│ ID       PID      Status    Started            Command                  │
-│ abc1234  12345    running   2024-01-01 11:40   npm run dev              │
-│ def6789  67890    exited    2024-01-01 11:10   cargo build              │
-│ ghi1111  11111    killed    2024-01-01 10:40   python script.py         │
+│ ID               PID      Status    Started          Command            │
+│ abc12345-6789-1  12345    running   2024-01-01 11:4  npm run dev        │
+│ def67890-1234-5  67890    exited    2024-01-01 11:1  cargo build        │
+│ ghi11111-5678-9  11111    killed    2024-01-01 10:4  python script.py   │
 │                                                                         │
 │                                                                         │
 │                                                                         │

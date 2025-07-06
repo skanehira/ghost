@@ -6,11 +6,11 @@ use ratatui::{
 };
 
 // Layout constants
-const ID_COLUMN_WIDTH: u16 = 10;
+const ID_COLUMN_WIDTH: u16 = 38; // Full UUID (36 chars) + 2 for padding
 const PID_COLUMN_WIDTH: u16 = 8;
 const STATUS_COLUMN_WIDTH: u16 = 9;
-const STARTED_COLUMN_WIDTH: u16 = 19;
-const COMMAND_COLUMN_MIN_WIDTH: u16 = 26;
+const STARTED_COLUMN_WIDTH: u16 = 16;
+const COMMAND_COLUMN_MIN_WIDTH: u16 = 20;
 
 // Column constraints for the table
 const COLUMN_CONSTRAINTS: [Constraint; 5] = [
@@ -183,14 +183,14 @@ impl<'a> TaskListWidget<'a> {
                 .map(|task| {
                     let status_style = self.status_style(&task.status);
 
-                    let task_id_short = &task.id[0..8];
+                    let task_id = &task.id;
                     let pid = task.pid;
                     let status = task.status.as_str();
                     let timestamp = self.format_timestamp(task.started_at);
                     let command = self.parse_command(&task.command);
 
                     Row::new(vec![
-                        Cell::from(format!(" {task_id_short}")), // Keep short ID
+                        Cell::from(format!(" {task_id}")), // Show full ID
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
                         Cell::from(format!(" {timestamp}")),

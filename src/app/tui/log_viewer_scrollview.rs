@@ -26,7 +26,7 @@ impl LogViewerScrollWidget {
         let lines = Self::load_log_file(&task.log_path);
         Self {
             lines,
-            task_id: task.id[0..8].to_string(),
+            task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
         }
     }
@@ -35,7 +35,7 @@ impl LogViewerScrollWidget {
     pub fn with_cached_content(task: &Task, cached_lines: Vec<String>) -> Self {
         Self {
             lines: cached_lines,
-            task_id: task.id[0..8].to_string(),
+            task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
         }
     }
@@ -70,7 +70,7 @@ impl LogViewerScrollWidget {
 
         Self {
             lines: existing_lines,
-            task_id: task.id[0..8].to_string(),
+            task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
         }
     }
@@ -257,8 +257,8 @@ mod tests {
         let buffer = terminal.backend().buffer();
         let content = buffer_to_string(buffer);
 
-        // Check title
-        assert!(content.contains("test_tas"));
+        // Check title contains full task ID
+        assert!(content.contains("test_task_12345678"));
         assert!(content.contains("echo test"));
 
         // Check footer

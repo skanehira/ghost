@@ -14,12 +14,8 @@ pub fn print_task_list(tasks: &[Task]) {
         let started = format_timestamp(task.started_at, "%Y-%m-%d %H:%M");
 
         println!(
-            "{:<8} {:<8} {:<10} {:<20} {:<30}",
-            truncate_string(&task.id, 8),
-            task.pid,
-            task.status,
-            started,
-            command_display
+            "{:<36} {:<8} {:<10} {:<20} {:<30}",
+            &task.id, task.pid, task.status, started, command_display
         );
     }
 }
@@ -27,10 +23,10 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<8} {:<8} {:<10} {:<20} {:<30}",
+        "{:<36} {:<8} {:<10} {:<20} {:<30}",
         "Task ID", "PID", "Status", "Started", "Command"
     );
-    println!("{}", "-".repeat(80));
+    println!("{}", "-".repeat(110)); // Increased from 80 to accommodate full UUID
 }
 
 /// Display detailed information about a single task
