@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751768507563,
+  "lastUpdate": 1751786334035,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -419,6 +419,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 0.18",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "7ddc7901254b38203ce468678a1e9f95552f96a3",
+          "message": "feat: add task termination with process group support\n\n- Add 's' key for SIGTERM (graceful stop)\n- Add Ctrl+K for SIGKILL (force stop)\n- Update footer to show s/C-k:Stop keybindings\n- Prioritize process group kill over individual PID kill\n- Fix npm/Next.js child process cleanup issue\n- Add tests for task termination functionality",
+          "timestamp": "2025-07-06T12:46:28+09:00",
+          "tree_id": "bc5dfebc72b29e672be87fd06ffa46458ee95c4f",
+          "url": "https://github.com/skanehira/ghost/commit/7ddc7901254b38203ce468678a1e9f95552f96a3"
+        },
+        "date": 1751786333578,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.11",
             "unit": "ns/iter"
           }
         ]
