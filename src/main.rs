@@ -61,12 +61,6 @@ enum Commands {
         task_id: String,
     },
 
-    /// Kill a process by PID (legacy command)
-    Kill {
-        /// Process ID to kill
-        pid: u32,
-    },
-
     /// Clean up old finished tasks
     Cleanup {
         /// Delete tasks older than this many days (default: 30)
@@ -105,7 +99,6 @@ async fn main() {
         Commands::Log { task_id, follow } => commands::log(&task_id, follow).await,
         Commands::Stop { task_id, force } => commands::stop(&task_id, force),
         Commands::Status { task_id } => commands::status(&task_id),
-        Commands::Kill { pid } => commands::kill(pid),
         Commands::Cleanup {
             days,
             status,

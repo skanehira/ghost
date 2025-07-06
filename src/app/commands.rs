@@ -123,13 +123,6 @@ pub fn status(task_id: &str) -> Result<()> {
     Ok(())
 }
 
-/// Kill a process by PID (legacy command)
-pub fn kill(pid: u32) -> Result<()> {
-    process::kill(pid, true)?;
-    println!("Process {pid} killed successfully.");
-    Ok(())
-}
-
 /// Clean up old finished tasks
 pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> Result<()> {
     let conn = storage::init_database()?;
