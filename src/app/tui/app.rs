@@ -121,6 +121,10 @@ impl TuiApp {
                     self.stop_task(true);
                 }
             }
+            KeyCode::Tab => {
+                self.cycle_filter();
+                self.refresh_tasks()?;
+            }
 
             _ => {}
         }
@@ -298,6 +302,18 @@ impl TuiApp {
             // Refresh task list to update status
             let _ = self.refresh_tasks();
         }
+    }
+
+    /// Cycle through task filters
+    fn cycle_filter(&mut self) {
+        self.filter = match self.filter {
+            TaskFilter::All => TaskFilter::Running,
+            TaskFilter::Running => TaskFilter::Exited,
+            TaskFilter::Exited => TaskFilter::Killed,
+            TaskFilter::Killed => TaskFilter::All,
+        };
+        // Reset selection when changing filter
+        self.table_scroll = TableScroll::new();
     }
 
     // Accessor methods for tests compatibility

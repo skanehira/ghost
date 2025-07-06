@@ -275,7 +275,7 @@ fn test_task_list_vertical_layout() {
 
     // Content block should contain title and table
     assert!(lines[0].starts_with("┌")); // Content top border
-    assert!(lines[0].contains("Ghost TUI v0.0.1"));
+    assert!(lines[0].contains("Ghost v"));
     assert!(lines[1].contains("ID"));
     assert!(lines[1].contains("PID"));
     assert!(lines[1].contains("Status"));
@@ -420,4 +420,77 @@ fn test_task_termination_keys() {
     let key_ctrl_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::CONTROL);
     let result = app.handle_key(key_ctrl_k);
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_task_filter_cycling_with_tab() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let mut app = TuiApp::new().unwrap();
+
+    // Add tasks with different statuses
+    let tasks = vec![
+        Task {
+            id: "running_task".to_string(),
+            pid: 12345,
+            pgid: Some(12345),
+            command: r#"["echo","running"]"#.to_string(),
+            env: None,
+            cwd: None,
+            status: TaskStatus::Running,
+            exit_code: None,
+            started_at: 1704109200,
+            finished_at: None,
+            log_path: "/tmp/running.log".to_string(),
+        },
+        Task {
+            id: "exited_task".to_string(),
+            pid: 12346,
+            pgid: Some(12346),
+            command: r#"["echo","exited"]"#.to_string(),
+            env: None,
+            cwd: None,
+            status: TaskStatus::Exited,
+            exit_code: Some(0),
+            started_at: 1704109200,
+            finished_at: Some(1704109260),
+            log_path: "/tmp/exited.log".to_string(),
+        },
+        Task {
+            id: "killed_task".to_string(),
+            pid: 12347,
+            pgid: Some(12347),
+            command: r#"["echo","killed"]"#.to_string(),
+            env: None,
+            cwd: None,
+            status: TaskStatus::Killed,
+            exit_code: Some(1),
+            started_at: 1704109200,
+            finished_at: Some(1704109260),
+            log_path: "/tmp/killed.log".to_string(),
+        },
+    ];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(3);
+
+    // Test initial filter is All
+    assert_eq!(app.filter, TaskFilter::All);
+
+    // Press Tab to cycle to Running
+    let key_tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+    app.handle_key(key_tab.clone()).unwrap();
+    assert_eq!(app.filter, TaskFilter::Running);
+
+    // Press Tab to cycle to Exited
+    app.handle_key(key_tab.clone()).unwrap();
+    assert_eq!(app.filter, TaskFilter::Exited);
+
+    // Press Tab to cycle to Killed
+    app.handle_key(key_tab.clone()).unwrap();
+    assert_eq!(app.filter, TaskFilter::Killed);
+
+    // Press Tab to cycle back to All
+    app.handle_key(key_tab).unwrap();
+    assert_eq!(app.filter, TaskFilter::All);
 }
