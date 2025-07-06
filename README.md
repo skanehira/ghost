@@ -9,10 +9,12 @@
 Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD).
 
 <div align="center">
-  <img src="./ghost.png" width=300 />
+  <img src="./images/logo.png" width=300 />
 </div>
 
 ## Features
+
+![](./images/ghost.png)
 
 - **Background Process Execution**: Run commands in the background without a daemon
 - **TUI Mode**: Interactive terminal UI for managing processes

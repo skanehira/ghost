@@ -117,7 +117,11 @@ impl LogViewerScrollWidget {
     fn create_footer(&self) -> Paragraph {
         let keybinds = " j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  Esc:Back  q:Quit ";
 
-        Paragraph::new(keybinds).block(Block::default().borders(Borders::ALL))
+        Paragraph::new(keybinds).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::LightMagenta)),
+        )
     }
 }
 
@@ -146,6 +150,7 @@ impl StatefulWidget for LogViewerScrollWidget {
         let title = format!(" {} - {} ", self.task_id, self.command);
         let content_block = Block::default()
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .border_style(Style::default().fg(Color::LightMagenta))
             .title(title);
 
         // Get the inner area for the scroll view

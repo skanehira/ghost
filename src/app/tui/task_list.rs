@@ -107,7 +107,10 @@ impl<'a> Widget for TaskListWidget<'a> {
         );
 
         // Create main block
-        let block = Block::default().borders(Borders::ALL).title(title);
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .border_style(Style::default().fg(Color::Green));
 
         // Get inner area for content
         let inner_area = block.inner(area);
@@ -232,7 +235,9 @@ impl<'a> TaskListWidget<'a> {
         // Need to overwrite the left and right border characters
         buf[(x - 1, y)].set_symbol("├");
         for i in 0..width {
-            buf[(x + i, y)].set_symbol("─");
+            buf[(x + i, y)]
+                .set_symbol("─")
+                .set_style(Style::default().fg(Color::Green));
         }
         buf[(x + width, y)].set_symbol("┤");
     }
