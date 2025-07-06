@@ -5,20 +5,28 @@
 ![GitHub Release Status](https://img.shields.io/github/v/release/skanehira/ghost)
 
 # Ghost
-This is a simple shell command management tool.
 
-It has the following features:
+Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD).
 
-- Manage shell commands with a TUI
-- Background execution of shell commands
-- No daemon required
+## Features
 
-This tool was inspired by the following:
+- **Background Process Execution**: Run commands in the background without a daemon
+- **TUI Mode**: Interactive terminal UI for managing processes
+- **Process Management**: Start, stop, and monitor processes
+- **Log Management**: Automatic log file creation and real-time following
+- **Working Directory Tracking**: See where each command was executed
+- **No Daemon Required**: Simple one-shot execution model
 
+This tool was inspired by:
 - [pueue](https://github.com/Nukesor/pueue)
 - [task-spooler](https://github.com/justanhduc/task-spooler)
 
 ## Installation
+
+### Requirements
+
+- Unix-based system (Linux, macOS, BSD)
+- Rust 1.80+ (2024 edition)
 
 ### Build from source
 
@@ -29,6 +37,16 @@ cargo build --release
 ```
 
 The binary will be available at `target/release/ghost`.
+
+### Install
+
+```bash
+# Copy to local bin directory
+cp target/release/ghost ~/.local/bin/
+
+# Or to system bin (requires sudo)
+sudo cp target/release/ghost /usr/local/bin/
+```
 
 ## Usage
 
@@ -72,22 +90,16 @@ $ ghost run --env NODE_ENV=production --env PORT=3000 npm start
 ```bash
 # List all tasks
 $ ghost list
-Task ID  PID      Status     Started              Command                       
---------------------------------------------------------------------------------
-e56ed5f8 8969     exited     2025-07-01 15:36     sleep 30                      
-9fe034eb 8730     exited     2025-07-01 15:35     echo Hello, World             
-cb5b7275 8349     running    2025-07-01 15:34     echo Hello, World             
-98765f79 5404     killed     2025-07-01 15:29     ./scripts/hello_loop.sh       
-89afd966 5298     exited     2025-07-01 15:29     ./scripts/hello_loop.sh       
+Task ID                              PID      Status     Started              Command                        Directory
+--------------------------------------------------------------------------------------------------------------------------------------
+e56ed5f8-44c8-4905-97aa-651164afd37e 8969     exited     2025-07-01 15:36     sleep 30                       /home/user/projects
+9fe034eb-2ce7-4809-af10-2c99af15583d 8730     exited     2025-07-01 15:35     echo Hello, World              /home/user
+cb5b7275-1234-5678-abcd-ef0123456789 8349     running    2025-07-01 15:34     npm run dev                    /home/user/my-app
+98765f79-abcd-ef01-2345-6789abcdef01 5404     killed     2025-07-01 15:29     ./scripts/hello_loop.sh        /home/user/scripts
+89afd966-5678-90ab-cdef-1234567890ab 5298     exited     2025-07-01 15:29     ./scripts/hello_loop.sh        /home/user/scripts       
 
 # Filter by status
-$ ghost list --status exited
-Task ID  PID      Status     Started              Command                       
---------------------------------------------------------------------------------
-e56ed5f8 8969     exited     2025-07-01 15:36     sleep 30                      
-9fe034eb 8730     exited     2025-07-01 15:35     echo Hello, World             
-89afd966 5298     exited     2025-07-01 15:29     ./scripts/hello_loop.sh       
-6a279d57 5203     exited     2025-07-01 15:29     ./scripts/hello_loop.sh       
+$ ghost list --status running       
 ```
 
 #### View task logs
@@ -122,6 +134,7 @@ Task: e56ed5f8-44c8-4905-97aa-651164afd37e
 PID: 8969
 Status: running
 Command: sleep 30
+Working directory: /home/user/projects
 Started: 2025-07-01 15:36:23
 Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-97aa-651164afd37e.log
 
@@ -131,8 +144,10 @@ Task: 9fe034eb-2ce7-4809-af10-2c99af15583d
 PID: 8730
 Status: exited
 Command: echo Hello, World
+Working directory: /home/user
 Started: 2025-07-01 15:35:36
 Finished: 2025-07-01 15:36:10
+Exit code: 0
 Log file: /Users/user/Library/Application Support/ghost/logs/9fe034eb-2ce7-4809-af10-2c99af15583d.log
 ```
 
@@ -152,21 +167,61 @@ $ ghost stop 9fe034eb-2ce7-4809-af10-2c99af15583d
 Error: Task 9fe034eb is not running (status: exited)
 ```
 
-#### Kill a process by PID
+#### Clean up old tasks
 
 ```bash
-# Kill a process directly by PID
-$ ghost kill 8969
-Process 8969 killed successfully.
+# Clean up tasks older than 30 days (default)
+$ ghost cleanup
+Successfully deleted 5 task(s).
+Deleted tasks older than 30 days with status: exited, killed.
 
-# Try to kill a non-existent PID
-$ ghost kill 9999
-Error: Unix system error: ESRCH: No such process
+# Clean up tasks older than 7 days
+$ ghost cleanup --days 7
 
-# Try to kill with invalid PID format
-$ ghost kill abc123
-Error: invalid digit found in string
+# Preview what would be deleted (dry run)
+$ ghost cleanup --dry-run
+The following 3 task(s) would be deleted:
+Task ID                              PID      Status     Started              Command                        Directory
+--------------------------------------------------------------------------------------------------------------------------------------
+89afd966-5678-90ab-cdef-1234567890ab 5298     exited     2025-06-01 15:29     ./scripts/backup.sh            /home/user
+6a279d57-1234-5678-abcd-ef0123456789 5203     exited     2025-06-01 15:29     ./scripts/cleanup.sh           /home/user
+
+# Clean up all finished tasks regardless of age
+$ ghost cleanup --all
+
+# Clean up only killed tasks
+$ ghost cleanup --status killed
 ```
+
+### TUI Mode
+
+Ghost includes an interactive Terminal User Interface for managing processes:
+
+```bash
+$ ghost tui
+```
+
+**TUI Features:**
+- Real-time process status updates (refreshes every second)
+- Interactive task management
+- Log viewer with line numbers
+- Keyboard navigation
+
+**TUI Keybindings:**
+- `j`/`k` or `↓`/`↑`: Move selection up/down
+- `g`/`G`: Jump to top/bottom of list
+- `l` or `Enter`: View logs for selected task
+- `s`: Send SIGTERM to selected task
+- `Ctrl+K`: Send SIGKILL to selected task  
+- `q` or `Esc`: Quit/Go back
+- `Tab`: Switch between task filters (All/Running/Exited/Killed)
+
+**Log Viewer Keybindings:**
+- `j`/`k` or `↓`/`↑`: Scroll up/down
+- `h`/`l` or `←`/`→`: Scroll left/right (for long lines)
+- `g`/`G`: Jump to top/bottom
+- `Page Up`/`Page Down`: Scroll by page
+- `Esc` or `q`: Return to task list
 
 ### Examples
 
@@ -194,31 +249,20 @@ Started background process:
   PID: 12350
   Log file: /Users/user/Library/Application Support/ghost/logs/f6g7h8i9-j0k1-2345-fghi-678901234567.log
 
-# Monitor multiple tasks
-$ ghost list
-Task ID  PID      Status     Started              Command                       
---------------------------------------------------------------------------------
-d4e5f6g7 12348    running    2024-01-15 10:35     python -m http.server 8080    
-e5f6g7h8 12349    exited     2024-01-15 10:36     npm test                      
-f6g7h8i9 12350    running    2024-01-15 10:37     rsync -av /home/user/ /backup/
+# Run a development server with environment variables
+$ ghost run --env NODE_ENV=development --env PORT=3000 --cwd ~/my-app npm run dev
+Started background process:
+  Task ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  PID: 12351
+  Log file: /Users/user/Library/Application Support/ghost/logs/a1b2c3d4-e5f6-7890-abcd-ef1234567890.log
 
-$ ghost status d4e5f6g7  # Use the task ID from list output
-Task: d4e5f6g7-h8i9-0123-defg-456789012345
-PID: 12348
-Status: running
-Command: python -m http.server 8080
-Started: 2024-01-15 10:35:42
-Log file: /Users/user/Library/Application Support/ghost/logs/d4e5f6g7-h8i9-0123-defg-456789012345.log
+# Run multiple commands in parallel
+$ ghost run --cwd ~/project1 npm run build
+$ ghost run --cwd ~/project2 cargo build --release
+$ ghost run --cwd ~/project3 go build
 
-# Check logs of a running task
-$ ghost log d4e5f6g7
-Serving HTTP on 0.0.0.0 port 8080 (http://0.0.0.0:8080/) ...
-192.168.1.100 - - [15/Jan/2024 10:36:15] "GET / HTTP/1.1" 200 -
-192.168.1.100 - - [15/Jan/2024 10:36:20] "GET /favicon.ico HTTP/1.1" 404 -
-
-# Stop a task when done
-$ ghost stop d4e5f6g7
-Process d4e5f6g7-h8i9-0123-defg-456789012345 (12348) has been exited
+# Monitor all running tasks in TUI
+$ ghost tui
 ```
 
 ### Task Management
@@ -238,12 +282,38 @@ Each background task gets:
 - **Status Monitoring**: Real-time status updates via process checking
 - **Cross-Platform**: Works on Unix-like systems (Linux, macOS)
 
+### Configuration
+
+#### Environment Variables
+
+- `GHOST_DATA_DIR`: Override data directory location (default: platform-specific)
+- `GHOST_LOG_DIR`: Override log directory location (default: `$GHOST_DATA_DIR/logs`)
+
+#### Default Locations
+
+**Linux:**
+- Data: `~/.local/share/ghost/`
+- Logs: `~/.local/share/ghost/logs/`
+
+**macOS:**
+- Data: `~/Library/Application Support/ghost/`
+- Logs: `~/Library/Application Support/ghost/logs/`
+
 ### Architecture
 
-Ghost uses a one-shot design where:
-1. **SQLite Database**: Stores task metadata and status
-2. **File-based Logs**: Each task gets its own log file
-3. **Process Groups**: Proper cleanup and signal handling
-4. **Lazy Evaluation**: Status updates only when needed
+Ghost uses a simple, daemon-free architecture:
 
-This approach eliminates the complexity of daemon management while providing reliable background process execution.
+1. **SQLite Database**: Stores task metadata and status (`ghost.db`)
+2. **File-based Logs**: Each task gets its own log file
+3. **Process Groups**: Uses `setsid()` for proper signal handling and cleanup
+4. **Status Monitoring**: Real-time process checking via signal 0
+5. **Non-blocking TUI**: Uses async event streams for responsive UI
+
+### Technical Details
+
+- **Language**: Rust (2024 edition)
+- **Database**: SQLite with bundled driver
+- **TUI Framework**: Ratatui with tui-scrollview
+- **Async Runtime**: Tokio
+- **Process Management**: Unix signals (SIGTERM/SIGKILL)
+- **Platform Support**: Unix-only (uses `nix` crate for system calls)

@@ -1,3 +1,5 @@
+use nix::sys::signal::{self, Signal};
+use nix::unistd::Pid;
 use nix::unistd::setsid;
 use std::fs::File;
 use std::os::unix::process::CommandExt as _;
@@ -5,16 +7,10 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use uuid::Uuid;
 
-#[cfg(unix)]
-use nix::sys::signal::{self, Signal};
-#[cfg(unix)]
-use nix::unistd::Pid;
-
 #[derive(Debug, Clone)]
 pub struct ProcessInfo {
     pub id: String,
     pub pid: u32,
-    #[cfg(unix)]
     pub pgid: i32,
     pub command: Vec<String>,
     pub log_path: PathBuf,
@@ -62,7 +58,6 @@ pub fn spawn_background_process(
         cmd.current_dir(cwd);
     }
 
-    #[cfg(unix)]
     unsafe {
         cmd.pre_exec(|| setsid().map(|_| ()).map_err(std::io::Error::other));
     }
@@ -75,7 +70,6 @@ pub fn spawn_background_process(
     let pid = child.id();
 
     // Get process group ID
-    #[cfg(unix)]
     let pgid = {
         // The process group ID should be the same as PID after setsid()
         pid as i32
@@ -84,7 +78,6 @@ pub fn spawn_background_process(
     let info = ProcessInfo {
         id: task_id,
         pid,
-        #[cfg(unix)]
         pgid,
         command,
         log_path,
@@ -95,7 +88,6 @@ pub fn spawn_background_process(
 
 /// Check if a process is still running
 pub fn exists(pid: u32) -> bool {
-    #[cfg(unix)]
     {
         // Send signal 0 to check if process exists
         // We need to check errno to distinguish between "no permission" and "no process"
@@ -109,7 +101,6 @@ pub fn exists(pid: u32) -> bool {
 
 /// Kill a process
 pub fn kill(pid: u32, force: bool) -> Result<()> {
-    #[cfg(unix)]
     {
         let signal = if force {
             Signal::SIGKILL
@@ -122,7 +113,6 @@ pub fn kill(pid: u32, force: bool) -> Result<()> {
 }
 
 /// Kill a process group
-#[cfg(unix)]
 pub fn kill_group(pgid: i32, force: bool) -> Result<()> {
     let signal = if force {
         Signal::SIGKILL
@@ -239,13 +229,10 @@ mod tests {
         let script_path = temp_dir.path().join("ignore_term.sh");
         std::fs::write(&script_path, script_content).unwrap();
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&script_path, perms).unwrap();
-        }
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms).unwrap();
 
         let command = vec![script_path.to_string_lossy().to_string()];
         let result = spawn_background_process(command, None, Some(log_dir));

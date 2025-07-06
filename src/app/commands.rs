@@ -37,10 +37,7 @@ fn spawn_and_register_process(
         conn,
         &process_info.id,
         process_info.pid,
-        #[cfg(unix)]
         Some(process_info.pgid),
-        #[cfg(not(unix))]
-        None,
         &command,
         if env_vars.is_empty() {
             None

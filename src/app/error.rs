@@ -50,7 +50,6 @@ pub enum GhostError {
     InvalidArgument { message: String },
 
     // System-level errors
-    #[cfg(unix)]
     #[error("Unix system error: {source}")]
     Unix {
         #[from]
