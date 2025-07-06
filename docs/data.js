@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751786334035,
+  "lastUpdate": 1751789705138,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -449,6 +449,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.11",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "0e80d97b082beac6925b87a94822a27fbc2ff269",
+          "message": "chore: add TODO.md",
+          "timestamp": "2025-07-06T17:13:31+09:00",
+          "tree_id": "f5571686c848d79ca204a3eb2e45c24d9ebff562",
+          "url": "https://github.com/skanehira/ghost/commit/0e80d97b082beac6925b87a94822a27fbc2ff269"
+        },
+        "date": 1751789704545,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18,
+            "range": "± 0.15",
             "unit": "ns/iter"
           }
         ]
