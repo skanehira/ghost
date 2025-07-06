@@ -87,52 +87,35 @@ impl TuiApp {
 
     fn handle_task_list_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            // Quit
             KeyCode::Char('q') => {
                 self.should_quit = true;
             }
-
-            // Navigation (Vim-like)
-            KeyCode::Char('j') | KeyCode::Down => {
-                self.move_selection_down();
+            KeyCode::Char('j') => {
+                self.table_scroll.next();
             }
             KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.move_selection_up();
+                self.table_scroll.previous();
             }
-            KeyCode::Up => {
-                self.move_selection_up();
-            }
-
-            // Go to top/bottom
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
-                // Handle 'gg' for top - this is simplified, real vim would need state tracking
                 self.table_scroll.first();
             }
             KeyCode::Char('G') => {
                 self.table_scroll.last();
             }
-
-            // Log view
             KeyCode::Char('l') => {
                 if !self.tasks.is_empty() {
                     self.view_mode = ViewMode::LogView;
                     self.initialize_log_view();
                 }
             }
-
-            // Ctrl+C as alternative quit
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
-
-            // Stop task with SIGTERM
             KeyCode::Char('s') => {
                 if !self.tasks.is_empty() {
                     self.stop_task(false);
                 }
             }
-
-            // Kill task with SIGKILL
             KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 if !self.tasks.is_empty() {
                     self.stop_task(true);
@@ -147,62 +130,38 @@ impl TuiApp {
 
     fn handle_log_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            // Return to task list
             KeyCode::Esc => {
                 self.view_mode = ViewMode::TaskList;
-                // Reset scroll state for next time
                 self.log_scroll_state.scroll_to_top();
             }
-
-            // Quit
             KeyCode::Char('q') => {
                 self.should_quit = true;
             }
-
-            // Scroll in log view
-            KeyCode::Char('j') | KeyCode::Down => {
+            KeyCode::Char('j') => {
                 self.log_scroll_state.scroll_down();
             }
             KeyCode::Char('k') => {
                 self.log_scroll_state.scroll_up();
             }
-            KeyCode::Up => {
-                self.log_scroll_state.scroll_up();
-            }
-
-            // Horizontal scroll
             KeyCode::Char('h') => {
                 self.log_scroll_state.scroll_left();
             }
             KeyCode::Char('l') => {
                 self.log_scroll_state.scroll_right();
             }
-
-            // Go to top/bottom in log
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
                 self.log_scroll_state.scroll_to_top();
             }
             KeyCode::Char('G') => {
                 self.log_scroll_state.scroll_to_bottom();
             }
-
-            // Ctrl+C as alternative quit
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
-
             _ => {}
         }
 
         Ok(())
-    }
-
-    fn move_selection_down(&mut self) {
-        self.table_scroll.next();
-    }
-
-    fn move_selection_up(&mut self) {
-        self.table_scroll.previous();
     }
 
     fn initialize_log_view(&mut self) {
@@ -219,8 +178,6 @@ impl TuiApp {
                     self.log_lines_count = 0;
                 }
 
-                // Start at the beginning of the log
-                self.log_scroll_offset = 0;
                 // Reset scroll state to start from the top
                 self.log_scroll_state.scroll_to_top();
             }

@@ -101,7 +101,10 @@ impl<'a> TaskListWidget<'a> {
 impl<'a> Widget for TaskListWidget<'a> {
     fn render(self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
         let filter_name = self.filter_name();
-        let title = format!(" Ghost TUI v0.0.1 [Filter: {filter_name}] ");
+        let title = format!(
+            " Ghost v{} [Filter: {filter_name}] ",
+            env!("CARGO_PKG_VERSION")
+        );
 
         // Create main block
         let block = Block::default().borders(Borders::ALL).title(title);

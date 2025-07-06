@@ -118,7 +118,7 @@ Processing file 2/10
 Script completed successfully
 
 # Follow logs in real-time (like tail -f)
-$ ghost log e56ed5f8-44c8-4905-97aa-651164afd37e --follow
+$ ghost log -f e56ed5f8-44c8-4905-97aa-651164afd37e
 Following logs for task e56ed5f8-44c8-4905-97aa-651164afd37e (Ctrl+C to stop):
 Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-97aa-651164afd37e.log
 ----------------------------------------
@@ -166,10 +166,12 @@ Process c3d4e5f6-g7h8-9012-cdef-345678901234 (12347) has been killed
 
 # Try to stop an already stopped task
 $ ghost stop 9fe034eb-2ce7-4809-af10-2c99af15583d
-Error: Task 9fe034eb is not running (status: exited)
+Error: Task operation failed: 9fe034eb-2ce7-4809-af10-2c99af15583d - Task is not running (status: exited)
 ```
 
 #### Clean up old tasks
+
+**Important**: By default, `cleanup` only removes tasks that are **older than 30 days**. This is to prevent accidental deletion of recent tasks.
 
 ```bash
 # Clean up tasks older than 30 days (default)
@@ -180,6 +182,9 @@ Deleted tasks older than 30 days with status: exited, killed.
 # Clean up tasks older than 7 days
 $ ghost cleanup --days 7
 
+# Clean up ALL tasks (including recent ones) - be careful!
+$ ghost cleanup --days 0
+
 # Preview what would be deleted (dry run)
 $ ghost cleanup --dry-run
 The following 3 task(s) would be deleted:
@@ -188,12 +193,30 @@ Task ID                              PID      Status     Started              Co
 89afd966-5678-90ab-cdef-1234567890ab 5298     exited     2025-06-01 15:29     ./scripts/backup.sh            /home/user
 6a279d57-1234-5678-abcd-ef0123456789 5203     exited     2025-06-01 15:29     ./scripts/cleanup.sh           /home/user
 
+Note: Only tasks older than 30 days would be deleted.
+
 # Clean up all finished tasks regardless of age
 $ ghost cleanup --all
+Successfully deleted 12 task(s).
+Deleted all finished tasks regardless of age.
 
-# Clean up only killed tasks
+# Clean up only killed tasks older than 30 days
 $ ghost cleanup --status killed
+No tasks found matching cleanup criteria.
+# Note: If no tasks are found, they might be too recent. Use --days or --all
+
+# Clean up recent killed tasks (from today)
+$ ghost cleanup --status killed --days 0
+
+# Clean up all killed tasks regardless of age
+$ ghost cleanup --status killed --all
 ```
+
+**Cleanup Options:**
+- `--days N`: Delete tasks older than N days (default: 30)
+- `--all`: Delete all finished tasks regardless of age (overrides --days)
+- `--status STATUS`: Filter by status (exited, killed, unknown, all)
+- `--dry-run` or `-n`: Preview what would be deleted without actually deleting
 
 ### TUI Mode
 
@@ -209,21 +232,20 @@ $ ghost tui
 - Log viewer with line numbers
 - Keyboard navigation
 
-**TUI Keybindings:**
-- `j`/`k` or `↓`/`↑`: Move selection up/down
+**Task List Keybindings:**
+- `j`/`k`: Move selection up/down
 - `g`/`G`: Jump to top/bottom of list
-- `l` or `Enter`: View logs for selected task
+- `l`: View logs for selected task
 - `s`: Send SIGTERM to selected task
 - `Ctrl+K`: Send SIGKILL to selected task  
-- `q` or `Esc`: Quit/Go back
+- `q`: Quit
 - `Tab`: Switch between task filters (All/Running/Exited/Killed)
 
 **Log Viewer Keybindings:**
-- `j`/`k` or `↓`/`↑`: Scroll up/down
-- `h`/`l` or `←`/`→`: Scroll left/right (for long lines)
+- `j`/`k`: Scroll up/down
+- `h`/`l`: Scroll left/right (for long lines)
 - `g`/`G`: Jump to top/bottom
-- `Page Up`/`Page Down`: Scroll by page
-- `Esc` or `q`: Return to task list
+- `Esc`: Return to task list
 
 ### Key Features
 
@@ -234,11 +256,6 @@ $ ghost tui
 - **Cross-Platform**: Works on Unix-like systems (Linux, macOS)
 
 ### Configuration
-
-#### Environment Variables
-
-- `GHOST_DATA_DIR`: Override data directory location (default: platform-specific)
-- `GHOST_LOG_DIR`: Override log directory location (default: `$GHOST_DATA_DIR/logs`)
 
 #### Default Locations
 
