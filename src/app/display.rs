@@ -29,8 +29,8 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<36} {:<8} {:<10} {:<20} {:<30} {}",
-        "Task ID", "PID", "Status", "Started", "Command", "Directory"
+        "{:<36} {:<8} {:<10} {:<20} {:<30} Directory",
+        "Task ID", "PID", "Status", "Started", "Command"
     );
     println!("{}", "-".repeat(134));
 }
