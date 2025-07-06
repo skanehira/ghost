@@ -85,7 +85,7 @@ fn test_empty_task_list_display() {
     let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let app = App::new();
+    let mut app = App::new();
 
     terminal
         .draw(|f| {
@@ -111,7 +111,7 @@ fn test_task_list_with_tasks_display() {
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
-    let app = App::with_tasks(tasks);
+    let mut app = App::with_tasks(tasks);
 
     terminal
         .draw(|f| {
@@ -181,7 +181,7 @@ fn test_footer_keybinds_display() {
     let backend = TestBackend::new(75, 12);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let app = App::new();
+    let mut app = App::new();
 
     terminal
         .draw(|f| {
@@ -207,7 +207,7 @@ fn test_footer_keybinds_with_tasks() {
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
-    let app = App::with_tasks(tasks);
+    let mut app = App::with_tasks(tasks);
 
     terminal
         .draw(|f| {
@@ -232,7 +232,7 @@ fn test_footer_contains_keybinds() {
     let backend = TestBackend::new(75, 8);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let app = App::new();
+    let mut app = App::new();
 
     terminal
         .draw(|f| {
@@ -290,7 +290,7 @@ fn test_log_view_key_handling() {
     // Add test tasks
     let tasks = create_test_tasks();
     app.tasks = tasks;
-    app.selected_index = 0;
+    app.set_selected_index(0);
 
     // Switch to log view
     let key_l = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE);
@@ -328,7 +328,7 @@ fn test_task_list_vertical_layout() {
     let mut terminal = Terminal::new(backend).unwrap();
 
     let tasks = create_test_tasks();
-    let app = App::with_tasks(tasks);
+    let mut app = App::with_tasks(tasks);
 
     terminal
         .draw(|f| {
@@ -384,34 +384,35 @@ fn test_table_scroll_functionality() {
         });
     }
     app.tasks = tasks;
-    app.table_scroll_offset = 0;
+    app.table_scroll.set_total_items(20);
+    app.set_selected_index(0);
 
     // Test scrolling down
     let key_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
     app.handle_key(key_j).unwrap();
 
     // After first j, selection should move but scroll should not change yet
-    assert_eq!(app.selected_index, 1);
-    assert_eq!(app.table_scroll_offset, 0);
+    assert_eq!(app.selected_index(), 1);
+    assert_eq!(app.table_scroll_offset(), 0);
 
     // Test scrolling up
     let key_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
     app.handle_key(key_k).unwrap();
-    assert_eq!(app.selected_index, 0);
-    assert_eq!(app.table_scroll_offset, 0);
+    assert_eq!(app.selected_index(), 0);
+    assert_eq!(app.table_scroll_offset(), 0);
 
     // Test going to bottom triggers scroll
     let key_shift_g = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
     app.handle_key(key_shift_g).unwrap();
-    assert_eq!(app.selected_index, 19); // Last task
+    assert_eq!(app.selected_index(), 19); // Last task
     // Scroll offset should be adjusted to show the selected item
-    assert!(app.table_scroll_offset > 0);
+    assert!(app.table_scroll_offset() > 0);
 
     // Test going to top resets scroll
     let key_g = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE);
     app.handle_key(key_g).unwrap();
-    assert_eq!(app.selected_index, 0);
-    assert_eq!(app.table_scroll_offset, 0);
+    assert_eq!(app.selected_index(), 0);
+    assert_eq!(app.table_scroll_offset(), 0);
 }
 
 #[test]
@@ -437,7 +438,7 @@ fn test_table_scroll_display() {
         });
     }
 
-    let app = App::with_tasks_and_scroll(tasks, 5); // Start scrolled down 5 rows
+    let mut app = App::with_tasks_and_scroll(tasks, 5); // Start scrolled down 5 rows
 
     terminal
         .draw(|f| {
@@ -483,7 +484,7 @@ fn test_log_viewer_updates_on_file_change() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     // First render to initialize log view
@@ -550,7 +551,7 @@ fn test_log_viewer_caches_file_content() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     let backend = TestBackend::new(80, 24);
@@ -615,7 +616,7 @@ fn test_log_viewer_reloads_on_file_modification() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     let backend = TestBackend::new(80, 24);
@@ -679,7 +680,7 @@ fn test_log_viewer_only_processes_visible_lines() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     // Create a small terminal (only 20 lines visible)
@@ -748,7 +749,7 @@ fn test_log_viewer_memory_limit() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     let backend = TestBackend::new(80, 24);
@@ -822,7 +823,7 @@ fn test_log_viewer_auto_updates_on_file_change() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     let backend = TestBackend::new(80, 24);
@@ -893,7 +894,7 @@ fn test_log_viewer_incremental_update() {
 
     let mut app = TuiApp::new().unwrap();
     app.tasks = vec![task];
-    app.selected_index = 0;
+    app.set_selected_index(0);
     app.view_mode = ghost::app::tui::ViewMode::LogView;
 
     let backend = TestBackend::new(80, 24);
@@ -966,7 +967,8 @@ fn test_task_termination_keys() {
         log_path: "/tmp/test.log".to_string(),
     }];
     app.tasks = tasks;
-    app.selected_index = 0;
+    app.table_scroll.set_total_items(1);
+    app.set_selected_index(0);
 
     // Test 's' key for SIGTERM
     let key_s = KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE);

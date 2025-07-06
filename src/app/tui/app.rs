@@ -6,6 +6,7 @@ use std::fs;
 use std::time::SystemTime;
 
 use super::log_viewer::LogViewerWidget;
+use super::table_state_scroll::TableScroll;
 use super::{TaskFilter, ViewMode};
 use crate::app::config::Config;
 use crate::app::error::Result;
@@ -27,13 +28,12 @@ enum UpdateStrategy {
 
 pub struct TuiApp {
     pub tasks: Vec<Task>,
-    pub selected_index: usize,
+    pub table_scroll: TableScroll,
     pub filter: TaskFilter,
     pub should_quit: bool,
     pub view_mode: ViewMode,
     pub log_scroll_offset: usize,
     pub log_lines_count: usize,
-    pub table_scroll_offset: usize,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
 }
@@ -45,13 +45,12 @@ impl TuiApp {
 
         Ok(Self {
             tasks: Vec::new(),
-            selected_index: 0,
+            table_scroll: TableScroll::new(),
             filter: TaskFilter::All,
             should_quit: false,
             view_mode: ViewMode::TaskList,
             log_scroll_offset: 0,
             log_lines_count: 0,
-            table_scroll_offset: 0,
             conn,
             log_cache: HashMap::new(),
         })
@@ -69,10 +68,8 @@ impl TuiApp {
 
         self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter)?;
 
-        // Adjust selected index if needed
-        if self.selected_index >= self.tasks.len() && !self.tasks.is_empty() {
-            self.selected_index = self.tasks.len() - 1;
-        }
+        // Update table scroll with new item count
+        self.table_scroll.set_total_items(self.tasks.len());
 
         Ok(())
     }
@@ -106,14 +103,10 @@ impl TuiApp {
             // Go to top/bottom
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
                 // Handle 'gg' for top - this is simplified, real vim would need state tracking
-                self.selected_index = 0;
-                self.table_scroll_offset = 0;
+                self.table_scroll.first();
             }
             KeyCode::Char('G') => {
-                if !self.tasks.is_empty() {
-                    self.selected_index = self.tasks.len() - 1;
-                    self.adjust_scroll_for_selection();
-                }
+                self.table_scroll.last();
             }
 
             // Log view
@@ -194,49 +187,30 @@ impl TuiApp {
     }
 
     fn move_selection_down(&mut self) {
-        if !self.tasks.is_empty() && self.selected_index < self.tasks.len() - 1 {
-            self.selected_index += 1;
-            self.adjust_scroll_for_selection();
-        }
+        self.table_scroll.next();
     }
 
     fn move_selection_up(&mut self) {
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
-            self.adjust_scroll_for_selection();
-        }
-    }
-
-    fn adjust_scroll_for_selection(&mut self) {
-        // Calculate visible area height (total height - header - footer - borders)
-        // For simplicity, assume we can display about 5 task rows in the visible area
-        let visible_rows = 5;
-
-        // If selected item is below visible area, scroll down
-        if self.selected_index >= self.table_scroll_offset + visible_rows {
-            self.table_scroll_offset = self.selected_index.saturating_sub(visible_rows - 1);
-        }
-        // If selected item is above visible area, scroll up
-        else if self.selected_index < self.table_scroll_offset {
-            self.table_scroll_offset = self.selected_index;
-        }
+        self.table_scroll.previous();
     }
 
     fn initialize_log_view(&mut self) {
-        if !self.tasks.is_empty() && self.selected_index < self.tasks.len() {
-            let selected_task = &self.tasks[self.selected_index];
-            let log_path = &selected_task.log_path;
+        if let Some(selected) = self.table_scroll.selected() {
+            if selected < self.tasks.len() {
+                let selected_task = &self.tasks[selected];
+                let log_path = &selected_task.log_path;
 
-            // Check cache first
-            if let Some(cache) = self.log_cache.get(log_path) {
-                self.log_lines_count = cache.content.len();
-            } else {
-                // If not in cache, we'll load it on first render
-                self.log_lines_count = 0;
+                // Check cache first
+                if let Some(cache) = self.log_cache.get(log_path) {
+                    self.log_lines_count = cache.content.len();
+                } else {
+                    // If not in cache, we'll load it on first render
+                    self.log_lines_count = 0;
+                }
+
+                // Start at the beginning of the log
+                self.log_scroll_offset = 0;
             }
-
-            // Start at the beginning of the log
-            self.log_scroll_offset = 0;
         }
     }
 
@@ -262,115 +236,118 @@ impl TuiApp {
     }
 
     /// Render task list widget
-    fn render_task_list(&self, frame: &mut Frame, area: Rect) {
+    fn render_task_list(&mut self, frame: &mut Frame, area: Rect) {
         use super::task_list::TaskListWidget;
 
-        let widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index)
-            .with_scroll_offset(self.table_scroll_offset);
+        let widget = TaskListWidget::new(&self.tasks, &self.filter, &mut self.table_scroll);
         frame.render_widget(widget, area);
     }
 
     /// Render log view widget
     fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
-        if !self.tasks.is_empty() && self.selected_index < self.tasks.len() {
-            let selected_task = &self.tasks[self.selected_index];
-            let log_path = &selected_task.log_path;
+        if let Some(selected) = self.table_scroll.selected() {
+            if selected < self.tasks.len() {
+                let selected_task = &self.tasks[selected];
+                let log_path = &selected_task.log_path;
 
-            // Check if we need to reload or incrementally update the file
-            let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
-                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                let file_size = metadata.len();
+                // Check if we need to reload or incrementally update the file
+                let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
+                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                    let file_size = metadata.len();
 
-                if let Some(cache) = self.log_cache.get(log_path) {
-                    if modified > cache.last_modified {
-                        if file_size > cache.file_size {
-                            // File grew, use incremental update
-                            UpdateStrategy::Incremental(cache.file_size)
+                    if let Some(cache) = self.log_cache.get(log_path) {
+                        if modified > cache.last_modified {
+                            if file_size > cache.file_size {
+                                // File grew, use incremental update
+                                UpdateStrategy::Incremental(cache.file_size)
+                            } else {
+                                // File changed in other ways, full reload
+                                UpdateStrategy::FullReload
+                            }
                         } else {
-                            // File changed in other ways, full reload
-                            UpdateStrategy::FullReload
+                            // No changes
+                            UpdateStrategy::UseCache
                         }
                     } else {
-                        // No changes
-                        UpdateStrategy::UseCache
+                        // No cache exists, need to load
+                        UpdateStrategy::FullReload
                     }
                 } else {
-                    // No cache exists, need to load
-                    UpdateStrategy::FullReload
-                }
-            } else {
-                // File doesn't exist or can't read metadata
-                UpdateStrategy::UseCache
-            };
+                    // File doesn't exist or can't read metadata
+                    UpdateStrategy::UseCache
+                };
 
-            let widget = match update_strategy {
-                UpdateStrategy::FullReload => {
-                    // Load the file and update cache
-                    let widget =
-                        LogViewerWidget::with_scroll_offset(selected_task, self.log_scroll_offset);
-
-                    // Store in cache
-                    if let Ok(metadata) = fs::metadata(log_path) {
-                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                        self.log_cache.insert(
-                            log_path.clone(),
-                            LogCache {
-                                content: widget.get_lines().to_vec(),
-                                last_modified: modified,
-                                file_size: metadata.len(),
-                            },
+                let widget = match update_strategy {
+                    UpdateStrategy::FullReload => {
+                        // Load the file and update cache
+                        let widget = LogViewerWidget::with_scroll_offset(
+                            selected_task,
+                            self.log_scroll_offset,
                         );
+
+                        // Store in cache
+                        if let Ok(metadata) = fs::metadata(log_path) {
+                            let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                            self.log_cache.insert(
+                                log_path.clone(),
+                                LogCache {
+                                    content: widget.get_lines().to_vec(),
+                                    last_modified: modified,
+                                    file_size: metadata.len(),
+                                },
+                            );
+                        }
+
+                        widget
                     }
-
-                    widget
-                }
-                UpdateStrategy::Incremental(previous_size) => {
-                    // Use incremental update
-                    let cache = self.log_cache.get(log_path).unwrap();
-                    let widget = LogViewerWidget::load_incremental_content(
-                        selected_task,
-                        self.log_scroll_offset,
-                        cache.content.clone(),
-                        previous_size,
-                    );
-
-                    // Update cache
-                    if let Ok(metadata) = fs::metadata(log_path) {
-                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                        self.log_cache.insert(
-                            log_path.clone(),
-                            LogCache {
-                                content: widget.get_lines().to_vec(),
-                                last_modified: modified,
-                                file_size: metadata.len(),
-                            },
+                    UpdateStrategy::Incremental(previous_size) => {
+                        // Use incremental update
+                        let cache = self.log_cache.get(log_path).unwrap();
+                        let widget = LogViewerWidget::load_incremental_content(
+                            selected_task,
+                            self.log_scroll_offset,
+                            cache.content.clone(),
+                            previous_size,
                         );
+
+                        // Update cache
+                        if let Ok(metadata) = fs::metadata(log_path) {
+                            let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                            self.log_cache.insert(
+                                log_path.clone(),
+                                LogCache {
+                                    content: widget.get_lines().to_vec(),
+                                    last_modified: modified,
+                                    file_size: metadata.len(),
+                                },
+                            );
+                        }
+
+                        widget
                     }
+                    UpdateStrategy::UseCache => {
+                        // Use cached content
+                        let cache = self.log_cache.get(log_path).unwrap();
+                        LogViewerWidget::with_cached_content(
+                            selected_task,
+                            self.log_scroll_offset,
+                            cache.content.clone(),
+                        )
+                    }
+                };
 
-                    widget
+                // Update the internal line count for proper scrolling
+                let new_lines_count = widget.get_lines_count();
+                if new_lines_count != self.log_lines_count {
+                    self.log_lines_count = new_lines_count;
+                    // If we were at the bottom, stay at the bottom
+                    if self.log_scroll_offset >= self.log_lines_count.saturating_sub(2) {
+                        self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
+                    }
                 }
-                UpdateStrategy::UseCache => {
-                    // Use cached content
-                    let cache = self.log_cache.get(log_path).unwrap();
-                    LogViewerWidget::with_cached_content(
-                        selected_task,
-                        self.log_scroll_offset,
-                        cache.content.clone(),
-                    )
-                }
-            };
 
-            // Update the internal line count for proper scrolling
-            let new_lines_count = widget.get_lines_count();
-            if new_lines_count != self.log_lines_count {
-                self.log_lines_count = new_lines_count;
-                // If we were at the bottom, stay at the bottom
-                if self.log_scroll_offset >= self.log_lines_count.saturating_sub(2) {
-                    self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
-                }
+                frame.render_widget(widget, area);
             }
-
-            frame.render_widget(widget, area);
         }
     }
 
@@ -378,10 +355,11 @@ impl TuiApp {
         self.should_quit
     }
 
+
     /// Stop the selected task
     fn stop_task(&mut self, force: bool) {
-        if self.selected_index < self.tasks.len() {
-            let task = &self.tasks[self.selected_index];
+        if self.selected_index() < self.tasks.len() {
+            let task = &self.tasks[self.selected_index()];
             let task_id = &task.id;
 
             // Send signal to stop the task (commands::stop handles process group killing)
@@ -391,4 +369,22 @@ impl TuiApp {
             let _ = self.refresh_tasks();
         }
     }
+
+    // Accessor methods for tests compatibility
+    pub fn selected_index(&self) -> usize {
+        self.table_scroll.selected().unwrap_or(0)
+    }
+
+    pub fn set_selected_index(&mut self, index: usize) {
+        if index < self.tasks.len() {
+            self.table_scroll.select(Some(index));
+        }
+    }
+
+    pub fn table_scroll_offset(&self) -> usize {
+        // Calculate visible offset based on selection
+        let selected = self.table_scroll.selected().unwrap_or(0);
+        selected.saturating_sub(2) // Keep some context above
+    }
+
 }

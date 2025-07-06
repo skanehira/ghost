@@ -2,7 +2,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Rect},
     style::{Color, Style},
-    widgets::{Block, Borders, Cell, Row, Table, Widget},
+    widgets::{Block, Borders, Cell, Row, StatefulWidget, Table, TableState, Widget},
 };
 
 // Layout constants
@@ -21,14 +21,14 @@ const COLUMN_CONSTRAINTS: [Constraint; 5] = [
     Constraint::Min(COMMAND_COLUMN_MIN_WIDTH),
 ];
 
-use super::{App, TaskFilter};
+use super::{App, TaskFilter, table_state_scroll::TableScroll};
 use crate::app::storage::task::Task;
 use crate::app::storage::task_status::TaskStatus;
 
 impl App {
-    pub fn render_task_list(&self, frame: &mut Frame, area: Rect) {
-        let task_list_widget = TaskListWidget::new(&self.tasks, &self.filter, self.selected_index)
-            .with_scroll_offset(self.table_scroll_offset);
+    pub fn render_task_list(&mut self, frame: &mut Frame, area: Rect) {
+        let task_list_widget =
+            TaskListWidget::new(&self.tasks, &self.filter, &mut self.table_scroll);
         frame.render_widget(task_list_widget, area);
     }
 }
@@ -36,23 +36,20 @@ impl App {
 pub struct TaskListWidget<'a> {
     tasks: &'a [Task],
     filter: &'a TaskFilter,
-    selected_index: usize,
-    scroll_offset: usize,
+    table_scroll: &'a mut TableScroll,
 }
 
 impl<'a> TaskListWidget<'a> {
-    pub fn new(tasks: &'a [Task], filter: &'a TaskFilter, selected_index: usize) -> Self {
+    pub fn new(
+        tasks: &'a [Task],
+        filter: &'a TaskFilter,
+        table_scroll: &'a mut TableScroll,
+    ) -> Self {
         Self {
             tasks,
             filter,
-            selected_index,
-            scroll_offset: 0,
+            table_scroll,
         }
-    }
-
-    pub fn with_scroll_offset(mut self, scroll_offset: usize) -> Self {
-        self.scroll_offset = scroll_offset;
-        self
     }
 
     fn filter_name(&self) -> &'static str {
@@ -110,7 +107,7 @@ impl<'a> Widget for TaskListWidget<'a> {
         let inner_area = block.inner(area);
 
         // Render the block border first
-        block.render(area, buf);
+        ratatui::widgets::Widget::render(block, area, buf);
 
         // Calculate areas dynamically based on available space
         // For 12-line terminal: total=12, border=2, inner=10, content=7, separator=1, footer=1, remaining=1
@@ -177,22 +174,13 @@ impl<'a> TaskListWidget<'a> {
 
             let table = Table::new(rows, COLUMN_CONSTRAINTS).header(self.create_header_row());
 
-            table.render(area, buf);
+            ratatui::widgets::Widget::render(table, area, buf);
         } else {
-            // Table with tasks - apply scrolling
-            let visible_tasks: Vec<&Task> = self.tasks.iter().skip(self.scroll_offset).collect();
-
-            let rows: Vec<Row> = visible_tasks
+            // Table with tasks
+            let rows: Vec<Row> = self
+                .tasks
                 .iter()
-                .enumerate()
-                .map(|(display_index, task)| {
-                    let actual_index = self.scroll_offset + display_index;
-                    let style = if actual_index == self.selected_index {
-                        Style::default().bg(Color::DarkGray)
-                    } else {
-                        Style::default()
-                    };
-
+                .map(|task| {
                     let status_style = self.status_style(&task.status);
 
                     let task_id_short = &task.id[0..8];
@@ -208,13 +196,17 @@ impl<'a> TaskListWidget<'a> {
                         Cell::from(format!(" {timestamp}")),
                         Cell::from(format!(" {command}")),
                     ])
-                    .style(style)
                 })
                 .collect();
 
-            let table = Table::new(rows, COLUMN_CONSTRAINTS).header(self.create_header_row());
+            let table = Table::new(rows, COLUMN_CONSTRAINTS)
+                .header(self.create_header_row())
+                .row_highlight_style(Style::default().bg(Color::DarkGray));
 
-            table.render(area, buf);
+            // Use a temporary table state and apply the selection
+            let mut table_state = TableState::default();
+            table_state.select(self.table_scroll.selected());
+            StatefulWidget::render(table, area, buf, &mut table_state);
         }
     }
 
@@ -235,17 +227,19 @@ impl<'a> TaskListWidget<'a> {
     }
 
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
-        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot ";
+        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot";
 
         // Draw the text
         for (i, ch) in keybinds_text.chars().enumerate() {
-            if i < width as usize {
-                buf[(x + i as u16, y)].set_symbol(&ch.to_string());
+            let pos_x = x + i as u16;
+            if pos_x < x + width {
+                buf[(pos_x, y)].set_symbol(&ch.to_string());
             }
         }
 
-        // Fill remaining space with spaces
-        for i in keybinds_text.len() as u16..width {
+        // Fill remaining space with spaces up to the border
+        let text_len = keybinds_text.chars().count() as u16;
+        for i in text_len..width {
             buf[(x + i, y)].set_symbol(" ");
         }
     }
