@@ -143,7 +143,7 @@ mod tests {
         // Stay at 2 (no wrap)
         scroll.next();
         assert_eq!(scroll.selected(), Some(2));
-        
+
         // Confirm it stays at 2
         scroll.next();
         assert_eq!(scroll.selected(), Some(2));
@@ -159,7 +159,7 @@ mod tests {
         // Stay at 0 (no wrap)
         scroll.previous();
         assert_eq!(scroll.selected(), Some(0));
-        
+
         // Move to 2
         scroll.select(Some(2));
         assert_eq!(scroll.selected(), Some(2));
@@ -171,7 +171,7 @@ mod tests {
         // Move to 0
         scroll.previous();
         assert_eq!(scroll.selected(), Some(0));
-        
+
         // Stay at 0
         scroll.previous();
         assert_eq!(scroll.selected(), Some(0));

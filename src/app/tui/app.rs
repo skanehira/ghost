@@ -4,8 +4,9 @@ use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs;
 use std::time::SystemTime;
+use tui_scrollview::ScrollViewState;
 
-use super::log_viewer::LogViewerWidget;
+use super::log_viewer_scrollview::LogViewerScrollWidget;
 use super::table_state_scroll::TableScroll;
 use super::{TaskFilter, ViewMode};
 use crate::app::config::Config;
@@ -34,6 +35,7 @@ pub struct TuiApp {
     pub view_mode: ViewMode,
     pub log_scroll_offset: usize,
     pub log_lines_count: usize,
+    pub log_scroll_state: ScrollViewState,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
 }
@@ -51,6 +53,7 @@ impl TuiApp {
             view_mode: ViewMode::TaskList,
             log_scroll_offset: 0,
             log_lines_count: 0,
+            log_scroll_state: ScrollViewState::default(),
             conn,
             log_cache: HashMap::new(),
         })
@@ -156,23 +159,21 @@ impl TuiApp {
 
             // Scroll in log view
             KeyCode::Char('j') | KeyCode::Down => {
-                self.scroll_log_down();
+                self.log_scroll_state.scroll_down();
             }
             KeyCode::Char('k') => {
-                self.scroll_log_up();
+                self.log_scroll_state.scroll_up();
             }
             KeyCode::Up => {
-                self.scroll_log_up();
+                self.log_scroll_state.scroll_up();
             }
 
             // Go to top/bottom in log
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
-                self.log_scroll_offset = 0;
+                self.log_scroll_state.scroll_to_top();
             }
             KeyCode::Char('G') => {
-                if self.log_lines_count > 0 {
-                    self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
-                }
+                self.log_scroll_state.scroll_to_bottom();
             }
 
             // Ctrl+C as alternative quit
@@ -211,18 +212,6 @@ impl TuiApp {
                 // Start at the beginning of the log
                 self.log_scroll_offset = 0;
             }
-        }
-    }
-
-    fn scroll_log_down(&mut self) {
-        if self.log_scroll_offset < self.log_lines_count.saturating_sub(1) {
-            self.log_scroll_offset += 1;
-        }
-    }
-
-    fn scroll_log_up(&mut self) {
-        if self.log_scroll_offset > 0 {
-            self.log_scroll_offset -= 1;
         }
     }
 
@@ -277,76 +266,49 @@ impl TuiApp {
                     UpdateStrategy::UseCache
                 };
 
-                let widget = match update_strategy {
-                    UpdateStrategy::FullReload => {
-                        // Load the file and update cache
-                        let widget = LogViewerWidget::with_scroll_offset(
-                            selected_task,
-                            self.log_scroll_offset,
-                        );
-
-                        // Store in cache
-                        if let Ok(metadata) = fs::metadata(log_path) {
-                            let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                            self.log_cache.insert(
-                                log_path.clone(),
-                                LogCache {
-                                    content: widget.get_lines().to_vec(),
-                                    last_modified: modified,
-                                    file_size: metadata.len(),
-                                },
-                            );
-                        }
-
-                        widget
-                    }
+                // Use scrollview widget
+                let scrollview_widget = match update_strategy {
+                    UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
                     UpdateStrategy::Incremental(previous_size) => {
-                        // Use incremental update
                         let cache = self.log_cache.get(log_path).unwrap();
-                        let widget = LogViewerWidget::load_incremental_content(
+                        LogViewerScrollWidget::load_incremental_content(
                             selected_task,
-                            self.log_scroll_offset,
                             cache.content.clone(),
                             previous_size,
-                        );
-
-                        // Update cache
-                        if let Ok(metadata) = fs::metadata(log_path) {
-                            let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                            self.log_cache.insert(
-                                log_path.clone(),
-                                LogCache {
-                                    content: widget.get_lines().to_vec(),
-                                    last_modified: modified,
-                                    file_size: metadata.len(),
-                                },
-                            );
-                        }
-
-                        widget
+                        )
                     }
                     UpdateStrategy::UseCache => {
-                        // Use cached content
                         let cache = self.log_cache.get(log_path).unwrap();
-                        LogViewerWidget::with_cached_content(
+                        LogViewerScrollWidget::with_cached_content(
                             selected_task,
-                            self.log_scroll_offset,
                             cache.content.clone(),
                         )
                     }
                 };
 
-                // Update the internal line count for proper scrolling
-                let new_lines_count = widget.get_lines_count();
-                if new_lines_count != self.log_lines_count {
-                    self.log_lines_count = new_lines_count;
-                    // If we were at the bottom, stay at the bottom
-                    if self.log_scroll_offset >= self.log_lines_count.saturating_sub(2) {
-                        self.log_scroll_offset = self.log_lines_count.saturating_sub(1);
+                // Update cache if needed
+                if matches!(
+                    update_strategy,
+                    UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+                ) {
+                    if let Ok(metadata) = fs::metadata(log_path) {
+                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        self.log_cache.insert(
+                            log_path.clone(),
+                            LogCache {
+                                content: scrollview_widget.get_lines().to_vec(),
+                                last_modified: modified,
+                                file_size: metadata.len(),
+                            },
+                        );
                     }
                 }
 
-                frame.render_widget(widget, area);
+                // Update line count
+                self.log_lines_count = scrollview_widget.get_lines_count();
+
+                // Render with scrollview state
+                frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
             }
         }
     }
@@ -354,7 +316,6 @@ impl TuiApp {
     pub fn should_quit(&self) -> bool {
         self.should_quit
     }
-
 
     /// Stop the selected task
     fn stop_task(&mut self, force: bool) {
@@ -386,5 +347,4 @@ impl TuiApp {
         let selected = self.table_scroll.selected().unwrap_or(0);
         selected.saturating_sub(2) // Keep some context above
     }
-
 }

@@ -19,6 +19,7 @@ futures = "0.3"
 notify = "8.0"
 ratatui = "0.29"
 crossterm = "0.28"
+tui-scrollview = "0.5.1"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.30", features = ["signal", "process"] }

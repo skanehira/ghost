@@ -1,5 +1,5 @@
 pub mod app;
-pub mod log_viewer;
+pub mod log_viewer_scrollview;
 pub mod table_state_scroll;
 pub mod task_list;
 
