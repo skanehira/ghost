@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751789705138,
+  "lastUpdate": 1751794593406,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -479,6 +479,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18,
             "range": "± 0.15",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "169f57b1ed1e32af1770cfd8f6c6089dad972b85",
+          "message": "feat: hide scrollbars in log viewer\n\n- Use ScrollbarVisibility::Never to hide both scrollbars\n- Keep functionality with keyboard navigation (j/k/h/l)\n- Cleaner interface as keybindings are shown in footer",
+          "timestamp": "2025-07-06T18:31:57+09:00",
+          "tree_id": "7c4386949edc0ec84c92f5d8804e31ecd92a1040",
+          "url": "https://github.com/skanehira/ghost/commit/169f57b1ed1e32af1770cfd8f6c6089dad972b85"
+        },
+        "date": 1751794592960,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.05,
+            "range": "± 1.17",
             "unit": "ns/iter"
           }
         ]
