@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751823741520,
+  "lastUpdate": 1751823801952,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -719,6 +719,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.03,
             "range": "± 0.22",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "94233cdbe5c1e383870647e3eb07dc3e358592cb",
+          "message": "feat(ui): enhance border styling in TUI components\n\nUpdated border styles in LogViewerScrollWidget and TaskListWidget to\nimprove visual clarity. Added light magenta and green colors for\nbetter differentiation. Updated README to reflect new image paths\nand added ghost.png for documentation purposes.\n\nBREAKING CHANGE: Renamed ghost.png to images/logo.png, which may\naffect existing references.",
+          "timestamp": "2025-07-07T02:41:46+09:00",
+          "tree_id": "9a31e6472af31ab10c18849fd84270706fcb2e77",
+          "url": "https://github.com/skanehira/ghost/commit/94233cdbe5c1e383870647e3eb07dc3e358592cb"
+        },
+        "date": 1751823801675,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.10",
             "unit": "ns/iter"
           }
         ]
