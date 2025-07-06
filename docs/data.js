@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751678394277,
+  "lastUpdate": 1751768507563,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -389,6 +389,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.96,
             "range": "± 0.20",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "62804b6e02acdab68f15f513cd8b376c24d76f4a",
+          "message": "feat: implement incremental log updates and cleanup\n\n- Add incremental file reading to only load new content\n- Implement smart update strategy (FullReload, Incremental, UseCache)\n- Track file size in cache for efficient diff updates\n- Remove unused LogViewer struct (dead code)\n- Add comprehensive tests for auto-updates and incremental loading",
+          "timestamp": "2025-07-05T10:43:47+09:00",
+          "tree_id": "9247a87408ada27cb4e2746c1477396a820c51ee",
+          "url": "https://github.com/skanehira/ghost/commit/62804b6e02acdab68f15f513cd8b376c24d76f4a"
+        },
+        "date": 1751768506721,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.18",
             "unit": "ns/iter"
           }
         ]
