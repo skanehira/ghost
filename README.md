@@ -122,7 +122,9 @@ $ ghost log e56ed5f8-44c8-4905-97aa-651164afd37e --follow
 Following logs for task e56ed5f8-44c8-4905-97aa-651164afd37e (Ctrl+C to stop):
 Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-97aa-651164afd37e.log
 ----------------------------------------
-[Follow mode not fully implemented yet]
+Processing file 1/10
+Processing file 2/10
+...
 ```
 
 #### Check task status

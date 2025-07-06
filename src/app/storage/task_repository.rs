@@ -52,7 +52,14 @@ pub fn get_task(conn: &Connection, task_id: &str) -> Result<Task> {
         "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks WHERE id = ?1"
     )?;
 
-    let task = stmt.query_row([task_id], row_to_task)?;
+    let task = stmt
+        .query_row([task_id], row_to_task)
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => crate::app::error::GhostError::TaskNotFound {
+                task_id: task_id.to_string(),
+            },
+            _ => e.into(),
+        })?;
     Ok(task)
 }
 
