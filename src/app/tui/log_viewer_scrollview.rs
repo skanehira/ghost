@@ -5,6 +5,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, StatefulWidget, Widget},
 };
+use serde_json;
 use tui_scrollview::{ScrollView, ScrollViewState};
 
 use crate::app::storage::task::Task;
@@ -14,19 +15,27 @@ const MAX_LINES_IN_MEMORY: usize = 10_000;
 /// A log viewer widget using tui-scrollview for efficient scrolling
 pub struct LogViewerScrollWidget {
     lines: Vec<String>,
+    task_id: String,
+    command: String,
 }
 
 impl LogViewerScrollWidget {
     /// Create a new log viewer with loaded content
     pub fn new(task: &Task) -> Self {
         let lines = Self::load_log_file(&task.log_path);
-        Self { lines }
+        Self {
+            lines,
+            task_id: task.id[0..8].to_string(),
+            command: Self::parse_command(&task.command),
+        }
     }
 
     /// Create with cached content
-    pub fn with_cached_content(_task: &Task, cached_lines: Vec<String>) -> Self {
+    pub fn with_cached_content(task: &Task, cached_lines: Vec<String>) -> Self {
         Self {
             lines: cached_lines,
+            task_id: task.id[0..8].to_string(),
+            command: Self::parse_command(&task.command),
         }
     }
 
@@ -60,6 +69,8 @@ impl LogViewerScrollWidget {
 
         Self {
             lines: existing_lines,
+            task_id: task.id[0..8].to_string(),
+            command: Self::parse_command(&task.command),
         }
     }
 
@@ -88,6 +99,17 @@ impl LogViewerScrollWidget {
     /// Get the total line count
     pub fn get_lines_count(&self) -> usize {
         self.lines.len()
+    }
+
+    /// Parse command from JSON format to readable string
+    fn parse_command(command_json: &str) -> String {
+        // Try to parse the JSON array format like ["npm","run","dev"]
+        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(command_json) {
+            parsed.join(" ")
+        } else {
+            // If parsing fails, return the original string
+            command_json.to_string()
+        }
     }
 
     /// Create footer widget
@@ -119,8 +141,11 @@ impl StatefulWidget for LogViewerScrollWidget {
         let content_height = self.lines.len() as u16;
         let content_size = Size::new(content_width, content_height);
 
-        // Create a block for the content area with borders
-        let content_block = Block::default().borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
+        // Create a block for the content area with borders and title
+        let title = format!(" {} - {} ", self.task_id, self.command);
+        let content_block = Block::default()
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .title(title);
 
         // Get the inner area for the scroll view
         let content_inner = content_block.inner(chunks[0]);
@@ -213,6 +238,10 @@ mod tests {
 
         let buffer = terminal.backend().buffer();
         let content = buffer_to_string(buffer);
+
+        // Check title
+        assert!(content.contains("test_tas"));
+        assert!(content.contains("echo test"));
 
         // Check footer
         assert!(content.contains("j/k:Scroll"));
