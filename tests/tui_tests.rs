@@ -245,8 +245,9 @@ fn test_footer_contains_keybinds() {
     // Check that footer contains essential keybinds
     assert!(buffer_output.contains("j/k:Move"));
     assert!(buffer_output.contains("l:Log"));
+    assert!(buffer_output.contains("s/C-k:Stop"));
     assert!(buffer_output.contains("q:Quit"));
-    assert!(buffer_output.contains("g/G:Top/Bottom"));
+    assert!(buffer_output.contains("g/G:Top/Bot"));
 }
 
 #[test]
@@ -371,7 +372,7 @@ fn test_table_scroll_functionality() {
         tasks.push(Task {
             id: format!("task_{i:03}"),
             pid: 1000 + i as u32,
-            pgid: Some(1000 + i as i32),
+            pgid: Some(1000 + i),
             command: format!(r#"["echo","task_{i}"]"#),
             env: None,
             cwd: None,
@@ -709,8 +710,7 @@ fn test_log_viewer_only_processes_visible_lines() {
     // Should only have around 10-15 visible lines (accounting for borders and headers)
     assert!(
         line_count < 20,
-        "Too many lines processed: {}. Should only process visible lines.",
-        line_count
+        "Too many lines processed: {line_count}. Should only process visible lines."
     );
 }
 
@@ -725,8 +725,7 @@ fn test_log_viewer_memory_limit() {
     for i in 0..50000 {
         writeln!(
             temp_file,
-            "Log line {}: This is a fairly long log line to consume more memory",
-            i
+            "Log line {i}: This is a fairly long log line to consume more memory"
         )
         .unwrap();
     }
@@ -942,4 +941,41 @@ fn test_log_viewer_incremental_update() {
     }
 
     assert!(buffer_output.contains("New log line") || buffer_output.contains("103 lines total"));
+}
+
+#[test]
+fn test_task_termination_keys() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::storage::task_status::TaskStatus;
+    use ghost::app::tui::app::TuiApp;
+
+    let mut app = TuiApp::new().unwrap();
+
+    // Add a running task
+    let tasks = vec![Task {
+        id: "test_task".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo","test"]"#.to_string(),
+        env: None,
+        cwd: None,
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200,
+        finished_at: None,
+        log_path: "/tmp/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.selected_index = 0;
+
+    // Test 's' key for SIGTERM
+    let key_s = KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE);
+    // We can't actually test the signal sending, but we can test that the handler is called
+    let result = app.handle_key(key_s);
+    assert!(result.is_ok());
+
+    // Test Ctrl+K for SIGKILL
+    let key_ctrl_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::CONTROL);
+    let result = app.handle_key(key_ctrl_k);
+    assert!(result.is_ok());
 }

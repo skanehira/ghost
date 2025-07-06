@@ -85,8 +85,12 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
 
     helpers::validate_task_running(&task)?;
 
-    // Kill the process
-    process::kill(task.pid, force)?;
+    // Kill the process group if available, otherwise kill individual process
+    if let Some(pgid) = task.pgid {
+        process::kill_group(pgid, force)?;
+    } else {
+        process::kill(task.pid, force)?;
+    }
 
     // Update status in database
     let status = if force {

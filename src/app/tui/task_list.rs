@@ -235,17 +235,16 @@ impl<'a> TaskListWidget<'a> {
     }
 
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
-        let keybinds_text = " j/k:Move  l:Log  q:Quit  g/G:Top/Bottom ";
+        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot ";
 
         // Draw the text
         for (i, ch) in keybinds_text.chars().enumerate() {
-            let pos_x = x + i as u16;
-            if pos_x < x + width {
-                buf[(pos_x, y)].set_symbol(&ch.to_string());
+            if i < width as usize {
+                buf[(x + i as u16, y)].set_symbol(&ch.to_string());
             }
         }
 
-        // Fill remaining space with spaces up to the border
+        // Fill remaining space with spaces
         for i in keybinds_text.len() as u16..width {
             buf[(x + i, y)].set_symbol(" ");
         }

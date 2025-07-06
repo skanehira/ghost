@@ -96,7 +96,10 @@ impl TuiApp {
             KeyCode::Char('j') | KeyCode::Down => {
                 self.move_selection_down();
             }
-            KeyCode::Char('k') | KeyCode::Up => {
+            KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.move_selection_up();
+            }
+            KeyCode::Up => {
                 self.move_selection_up();
             }
 
@@ -126,6 +129,20 @@ impl TuiApp {
                 self.should_quit = true;
             }
 
+            // Stop task with SIGTERM
+            KeyCode::Char('s') => {
+                if !self.tasks.is_empty() {
+                    self.stop_task(false);
+                }
+            }
+
+            // Kill task with SIGKILL
+            KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                if !self.tasks.is_empty() {
+                    self.stop_task(true);
+                }
+            }
+
             _ => {}
         }
 
@@ -148,7 +165,10 @@ impl TuiApp {
             KeyCode::Char('j') | KeyCode::Down => {
                 self.scroll_log_down();
             }
-            KeyCode::Char('k') | KeyCode::Up => {
+            KeyCode::Char('k') => {
+                self.scroll_log_up();
+            }
+            KeyCode::Up => {
                 self.scroll_log_up();
             }
 
@@ -356,5 +376,19 @@ impl TuiApp {
 
     pub fn should_quit(&self) -> bool {
         self.should_quit
+    }
+
+    /// Stop the selected task
+    fn stop_task(&mut self, force: bool) {
+        if self.selected_index < self.tasks.len() {
+            let task = &self.tasks[self.selected_index];
+            let task_id = &task.id;
+
+            // Send signal to stop the task (commands::stop handles process group killing)
+            let _ = crate::app::commands::stop(task_id, force);
+
+            // Refresh task list to update status
+            let _ = self.refresh_tasks();
+        }
     }
 }
