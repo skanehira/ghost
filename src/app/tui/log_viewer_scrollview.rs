@@ -2,6 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect, Size},
     style::{Color, Style},
+    symbols,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, StatefulWidget, Widget},
 };
@@ -152,6 +153,22 @@ impl StatefulWidget for LogViewerScrollWidget {
 
         // Render the content block
         content_block.render(chunks[0], buf);
+
+        // Draw the separator line between content and footer
+        // The separator is at the top of the footer block (chunks[1].y)
+        if chunks[1].y > 0 {
+            // Left connection: ├
+            buf[(chunks[0].x, chunks[1].y)].set_symbol(symbols::line::VERTICAL_RIGHT);
+
+            // Horizontal line
+            for x in chunks[0].x + 1..chunks[0].x + chunks[0].width - 1 {
+                buf[(x, chunks[1].y)].set_symbol(symbols::line::HORIZONTAL);
+            }
+
+            // Right connection: ┤
+            buf[(chunks[0].x + chunks[0].width - 1, chunks[1].y)]
+                .set_symbol(symbols::line::VERTICAL_LEFT);
+        }
 
         // Create scroll view with content size
         let mut scroll_view = ScrollView::new(content_size);
