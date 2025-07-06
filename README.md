@@ -8,7 +8,9 @@
 
 Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD).
 
-![](./ghost.png)
+<div align="center">
+  <img src="./ghost.png" width=300 />
+</div>
 
 ## Features
 
