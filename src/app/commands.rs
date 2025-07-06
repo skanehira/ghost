@@ -24,8 +24,14 @@ fn spawn_and_register_process(
     env_vars: Vec<(String, String)>,
     conn: &Connection,
 ) -> Result<(process::ProcessInfo, std::process::Child)> {
+    // If no cwd is specified, use the current directory
+    let effective_cwd = match cwd {
+        Some(path) => Some(path),
+        None => std::env::current_dir().ok(),
+    };
+
     let (process_info, child) =
-        process::spawn_background_process(command.clone(), cwd.clone(), None)?;
+        process::spawn_background_process(command.clone(), effective_cwd.clone(), None)?;
 
     storage::insert_task(
         conn,
@@ -41,7 +47,7 @@ fn spawn_and_register_process(
         } else {
             Some(&env_vars)
         },
-        cwd.as_deref(),
+        effective_cwd.as_deref(),
         &process_info.log_path,
     )?;
 
