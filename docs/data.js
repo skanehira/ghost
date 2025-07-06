@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751819212469,
+  "lastUpdate": 1751821955281,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -629,6 +629,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 0.14",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "41be6bf60c57493e6fec697d000060abab024440",
+          "message": "docs: replace old design documents with current architecture documentation\n\n- Remove outdated design.md and one-shot-design.md\n- Add architecture.md with current system design and implementation details\n- Add design-decisions.md documenting key architectural choices and rationale\n- Document default data directory behavior when GHOST_DATA_DIR is not set\n- Include comprehensive documentation of components, database schema, process management, and TUI design",
+          "timestamp": "2025-07-07T02:10:44+09:00",
+          "tree_id": "f977f3b1d8b3e166e544ef81ebea7351c4ee1067",
+          "url": "https://github.com/skanehira/ghost/commit/41be6bf60c57493e6fec697d000060abab024440"
+        },
+        "date": 1751821954977,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.04",
             "unit": "ns/iter"
           }
         ]
