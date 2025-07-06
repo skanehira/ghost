@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751794593406,
+  "lastUpdate": 1751795630647,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -509,6 +509,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.05,
             "range": "± 1.17",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "71134be33ee677fc495201307c9756d5f64b8e36",
+          "message": "feat: show full task IDs in list command and task list UI\n\n- Display full 36-character UUIDs in list command output\n- Show as much of the UUID as possible in task list UI (limited by terminal width)\n- Update test expectations to match new task ID display format\n- Mark completed tasks in TODO.md",
+          "timestamp": "2025-07-06T18:49:26+09:00",
+          "tree_id": "7e4efbabe88f5d6041c84adae9c547a982cd871b",
+          "url": "https://github.com/skanehira/ghost/commit/71134be33ee677fc495201307c9756d5f64b8e36"
+        },
+        "date": 1751795630350,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.13",
             "unit": "ns/iter"
           }
         ]
