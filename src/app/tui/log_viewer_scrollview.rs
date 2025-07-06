@@ -12,29 +12,27 @@ use crate::app::storage::task::Task;
 const MAX_LINES_IN_MEMORY: usize = 10_000;
 
 /// A log viewer widget using tui-scrollview for efficient scrolling
-pub struct LogViewerScrollWidget<'a> {
-    task: &'a Task,
+pub struct LogViewerScrollWidget {
     lines: Vec<String>,
 }
 
-impl<'a> LogViewerScrollWidget<'a> {
+impl LogViewerScrollWidget {
     /// Create a new log viewer with loaded content
-    pub fn new(task: &'a Task) -> Self {
+    pub fn new(task: &Task) -> Self {
         let lines = Self::load_log_file(&task.log_path);
-        Self { task, lines }
+        Self { lines }
     }
 
     /// Create with cached content
-    pub fn with_cached_content(task: &'a Task, cached_lines: Vec<String>) -> Self {
+    pub fn with_cached_content(_task: &Task, cached_lines: Vec<String>) -> Self {
         Self {
-            task,
             lines: cached_lines,
         }
     }
 
     /// Load incremental content from a file
     pub fn load_incremental_content(
-        task: &'a Task,
+        task: &Task,
         mut existing_lines: Vec<String>,
         previous_size: u64,
     ) -> Self {
@@ -61,7 +59,6 @@ impl<'a> LogViewerScrollWidget<'a> {
         }
 
         Self {
-            task,
             lines: existing_lines,
         }
     }
@@ -93,42 +90,23 @@ impl<'a> LogViewerScrollWidget<'a> {
         self.lines.len()
     }
 
-    /// Create header widget
-    fn create_header(&self) -> Paragraph {
-        let task_id_short = &self.task.id[0..8];
-        let title = format!(" Log Viewer - Task {} ", task_id_short);
-        Paragraph::new(title)
-            .block(Block::default().borders(Borders::TOP | Borders::LEFT | Borders::RIGHT))
-    }
-
     /// Create footer widget
     fn create_footer(&self) -> Paragraph {
-        let line_info = format!("{} lines total", self.lines.len());
-        let keybinds = " j/k:Scroll  gg/G:Top/Bottom  Esc:Back  q:Quit ";
-        let footer_text = format!("{:<20} {}", line_info, keybinds);
+        let keybinds = " j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  Esc:Back  q:Quit ";
 
-        Paragraph::new(footer_text)
-            .block(Block::default().borders(Borders::BOTTOM | Borders::LEFT | Borders::RIGHT))
+        Paragraph::new(keybinds).block(Block::default().borders(Borders::ALL))
     }
 }
 
-impl<'a> StatefulWidget for LogViewerScrollWidget<'a> {
+impl StatefulWidget for LogViewerScrollWidget {
     type State = ScrollViewState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        // Layout: header (3) + content + footer (3)
-        let chunks = Layout::vertical([
-            Constraint::Length(3),
-            Constraint::Min(5),
-            Constraint::Length(3),
-        ])
-        .split(area);
-
-        // Render header
-        self.create_header().render(chunks[0], buf);
+        // Layout: content + footer (3)
+        let chunks = Layout::vertical([Constraint::Min(5), Constraint::Length(3)]).split(area);
 
         // Render footer
-        self.create_footer().render(chunks[2], buf);
+        self.create_footer().render(chunks[1], buf);
 
         // Calculate content size (lines count, max line width)
         let content_width = self
@@ -140,6 +118,15 @@ impl<'a> StatefulWidget for LogViewerScrollWidget<'a> {
 
         let content_height = self.lines.len() as u16;
         let content_size = Size::new(content_width, content_height);
+
+        // Create a block for the content area with borders
+        let content_block = Block::default().borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
+
+        // Get the inner area for the scroll view
+        let content_inner = content_block.inner(chunks[0]);
+
+        // Render the content block
+        content_block.render(chunks[0], buf);
 
         // Create scroll view with content size
         let mut scroll_view = ScrollView::new(content_size);
@@ -174,8 +161,8 @@ impl<'a> StatefulWidget for LogViewerScrollWidget<'a> {
             Rect::new(7, 0, content_width.saturating_sub(7), content_height),
         );
 
-        // Render the scroll view
-        scroll_view.render(chunks[1], buf, state);
+        // Render the scroll view in the inner content area
+        scroll_view.render(content_inner, buf, state);
     }
 }
 
@@ -227,12 +214,9 @@ mod tests {
         let buffer = terminal.backend().buffer();
         let content = buffer_to_string(buffer);
 
-        // Check header
-        assert!(content.contains("Log Viewer - Task test_tas"));
-
         // Check footer
-        assert!(content.contains("3 lines total"));
         assert!(content.contains("j/k:Scroll"));
+        assert!(content.contains("h/l:Horizontal"));
         assert!(content.contains("gg/G:Top/Bottom"));
 
         // Check content with line numbers

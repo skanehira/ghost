@@ -150,6 +150,8 @@ impl TuiApp {
             // Return to task list
             KeyCode::Esc => {
                 self.view_mode = ViewMode::TaskList;
+                // Reset scroll state for next time
+                self.log_scroll_state.scroll_to_top();
             }
 
             // Quit
@@ -166,6 +168,14 @@ impl TuiApp {
             }
             KeyCode::Up => {
                 self.log_scroll_state.scroll_up();
+            }
+
+            // Horizontal scroll
+            KeyCode::Char('h') => {
+                self.log_scroll_state.scroll_left();
+            }
+            KeyCode::Char('l') => {
+                self.log_scroll_state.scroll_right();
             }
 
             // Go to top/bottom in log
@@ -211,6 +221,8 @@ impl TuiApp {
 
                 // Start at the beginning of the log
                 self.log_scroll_offset = 0;
+                // Reset scroll state to start from the top
+                self.log_scroll_state.scroll_to_top();
             }
         }
     }
