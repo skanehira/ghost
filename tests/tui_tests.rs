@@ -150,9 +150,9 @@ fn test_task_list_selection() {
 
     // Check that the output contains the tasks with truncated IDs due to column width
     // The selection highlighting will be tested once we have the expected file
-    assert!(buffer_output.contains("abc12345-6789-1"));
-    assert!(buffer_output.contains("def67890-1234-5"));
-    assert!(buffer_output.contains("ghi11111-5678-9"));
+    assert!(buffer_output.contains("abc123"));
+    assert!(buffer_output.contains("def678"));
+    assert!(buffer_output.contains("ghi111"));
 }
 
 #[test]

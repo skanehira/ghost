@@ -15,13 +15,13 @@ pub fn print_task_list(tasks: &[Task]) {
         let cwd_display = task.cwd.as_deref().unwrap_or("-");
 
         println!(
-            "{:<36} {:<8} {:<10} {:<20} {:<30} {:<30}",
+            "{:<36} {:<8} {:<10} {:<20} {:<30} {}",
             &task.id,
             task.pid,
             task.status.as_str(),
             started,
             command_display,
-            truncate_string(cwd_display, 30)
+            cwd_display
         );
     }
 }
@@ -29,10 +29,10 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<36} {:<8} {:<10} {:<20} {:<30} {:<30}",
+        "{:<36} {:<8} {:<10} {:<20} {:<30} {}",
         "Task ID", "PID", "Status", "Started", "Command", "Directory"
     );
-    println!("{}", "-".repeat(134)); // 36+8+10+20+30+30 = 134
+    println!("{}", "-".repeat(134));
 }
 
 /// Display detailed information about a single task

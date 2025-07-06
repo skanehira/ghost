@@ -1,7 +1,7 @@
 ┌ Ghost TUI v0.0.1 [Filter: All] ─────────────────────────────────────────┐
-│ ID               PID      Status    Started          Command            │
+│ ID      PID     Status  Starte  Command              Directory          │
 │                                                                         │
-│                 No tasks                                                │
+│        No task                                                          │
 │                                                                         │
 │                                                                         │
 │                                                                         │

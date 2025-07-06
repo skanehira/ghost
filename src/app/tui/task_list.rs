@@ -11,14 +11,16 @@ const PID_COLUMN_WIDTH: u16 = 8;
 const STATUS_COLUMN_WIDTH: u16 = 9;
 const STARTED_COLUMN_WIDTH: u16 = 16;
 const COMMAND_COLUMN_MIN_WIDTH: u16 = 20;
+const DIRECTORY_COLUMN_MIN_WIDTH: u16 = 20;
 
 // Column constraints for the table
-const COLUMN_CONSTRAINTS: [Constraint; 5] = [
+const COLUMN_CONSTRAINTS: [Constraint; 6] = [
     Constraint::Length(ID_COLUMN_WIDTH),
     Constraint::Length(PID_COLUMN_WIDTH),
     Constraint::Length(STATUS_COLUMN_WIDTH),
     Constraint::Length(STARTED_COLUMN_WIDTH),
     Constraint::Min(COMMAND_COLUMN_MIN_WIDTH),
+    Constraint::Min(DIRECTORY_COLUMN_MIN_WIDTH),
 ];
 
 use super::{App, TaskFilter, table_state_scroll::TableScroll};
@@ -90,6 +92,7 @@ impl<'a> TaskListWidget<'a> {
             Cell::from(" Status"),
             Cell::from(" Started"),
             Cell::from(" Command"),
+            Cell::from(" Directory"),
         ])
         .style(Style::default())
     }
@@ -155,6 +158,7 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
                     Cell::from(""),
@@ -162,8 +166,10 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
+                    Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
@@ -188,6 +194,7 @@ impl<'a> TaskListWidget<'a> {
                     let status = task.status.as_str();
                     let timestamp = self.format_timestamp(task.started_at);
                     let command = self.parse_command(&task.command);
+                    let directory = task.cwd.as_deref().unwrap_or("-");
 
                     Row::new(vec![
                         Cell::from(format!(" {task_id}")), // Show full ID
@@ -195,6 +202,7 @@ impl<'a> TaskListWidget<'a> {
                         Cell::from(format!(" {status}")).style(status_style),
                         Cell::from(format!(" {timestamp}")),
                         Cell::from(format!(" {command}")),
+                        Cell::from(format!(" {directory}")),
                     ])
                 })
                 .collect();
