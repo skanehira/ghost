@@ -17,6 +17,9 @@ GHOST_BIN="${GHOST_BINARY:-./target/release/ghost}"
 TEST_SCRIPT="./scripts/hello_loop.sh"
 MULTILINE_TEST_SCRIPT="./scripts/multiline_test.sh"
 
+# Set test data directory to avoid using production data
+export GHOST_DATA_DIR="/tmp/ghost_e2e_test_data"
+
 # Ensure we're in the correct directory (project root)
 if [[ ! -f "$GHOST_BIN" && ! -f "./target/release/ghost" && ! -f "Cargo.toml" ]]; then
     echo "Error: Must be run from project root directory" >&2

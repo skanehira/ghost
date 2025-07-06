@@ -45,9 +45,14 @@ impl Config {
 
 /// Get the default data directory for Ghost
 pub fn get_data_dir() -> PathBuf {
-    dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("ghost")
+    // Check if GHOST_DATA_DIR environment variable is set
+    if let Ok(data_dir) = std::env::var("GHOST_DATA_DIR") {
+        PathBuf::from(data_dir)
+    } else {
+        dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("ghost")
+    }
 }
 
 /// Get the default log directory

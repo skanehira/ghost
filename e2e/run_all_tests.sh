@@ -145,6 +145,8 @@ cleanup() {
     pkill -f "ghost" 2>/dev/null || true
     # Clean up any test files
     rm -f /tmp/ghost_e2e_*.log 2>/dev/null || true
+    # Clean up test data directory
+    rm -rf /tmp/ghost_e2e_test_data 2>/dev/null || true
 }
 
 trap cleanup EXIT

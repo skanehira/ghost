@@ -257,6 +257,10 @@ $ ghost tui
 
 ### Configuration
 
+#### Environment Variables
+
+- `GHOST_DATA_DIR`: Override the default data directory location. This is useful for testing or running multiple instances.
+
 #### Default Locations
 
 **Linux:**
