@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751797190883,
+  "lastUpdate": 1751811447036,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -568,6 +568,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "tests::bench_fib",
             "value": 18.01,
+            "range": "± 0.09",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "2d020eda52e892c46ac12a5edcfeb8e663256bcb",
+          "message": "fix: use EventStream for non-blocking event handling in TUI\n\n- Replace blocking event::read() with async EventStream\n- Enable crossterm's event-stream feature\n- Fix issue where refresh interval was blocked by keyboard input\n- Now tasks refresh every second regardless of user input",
+          "timestamp": "2025-07-06T23:06:42+09:00",
+          "tree_id": "60b0ca0933b23d978a2903bb921a5af4c98b93b5",
+          "url": "https://github.com/skanehira/ghost/commit/2d020eda52e892c46ac12a5edcfeb8e663256bcb"
+        },
+        "date": 1751811446585,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
             "range": "± 0.09",
             "unit": "ns/iter"
           }
