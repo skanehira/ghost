@@ -239,10 +239,11 @@ fn format_status_list(statuses: &[storage::TaskStatus]) -> String {
 /// Start TUI mode
 pub async fn tui() -> Result<()> {
     use crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+        event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream},
         execute,
         terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
     };
+    use futures::StreamExt;
     use ratatui::{Terminal, backend::CrosstermBackend};
     use std::io;
     use tokio::time::{Duration, interval};
@@ -260,8 +261,9 @@ pub async fn tui() -> Result<()> {
     let mut app = TuiApp::new()?;
     app.refresh_tasks()?;
 
-    // Setup refresh interval
+    // Setup refresh interval and event stream
     let mut refresh_interval = interval(Duration::from_secs(1));
+    let mut event_stream = EventStream::new();
 
     let result = loop {
         // Draw the UI
@@ -269,18 +271,21 @@ pub async fn tui() -> Result<()> {
 
         // Handle input and refresh
         tokio::select! {
-            // Handle keyboard events
-            key_result = async {
-                if let Ok(Event::Key(key)) = event::read() {
-                    return app.handle_key(key);
-                }
-                Ok(())
-            } => {
-                if let Err(e) = key_result {
-                    break Err(e);
-                }
-                if app.should_quit() {
-                    break Ok(());
+            // Handle keyboard events from async stream
+            Some(event_result) = event_stream.next() => {
+                match event_result {
+                    Ok(Event::Key(key)) => {
+                        if let Err(e) = app.handle_key(key) {
+                            break Err(e);
+                        }
+                        if app.should_quit() {
+                            break Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        break Err(error::GhostError::Io { source: e });
+                    }
+                    _ => {} // Ignore other events (Mouse, Resize, etc.)
                 }
             }
 
