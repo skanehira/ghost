@@ -92,7 +92,7 @@ async fn main() {
         Commands::Run { command, cwd, env } => commands::spawn(command, cwd, env),
         Commands::List { status } => commands::list(status),
         Commands::Log { task_id, follow } => commands::log(&task_id, follow).await,
-        Commands::Stop { task_id, force } => commands::stop(&task_id, force),
+        Commands::Stop { task_id, force } => commands::stop(&task_id, force, true),
         Commands::Status { task_id } => commands::status(&task_id),
         Commands::Cleanup {
             days,

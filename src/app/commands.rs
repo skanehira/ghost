@@ -82,7 +82,7 @@ pub async fn log(task_id: &str, follow: bool) -> Result<()> {
 }
 
 /// Stop a background process
-pub fn stop(task_id: &str, force: bool) -> Result<()> {
+pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     let conn = storage::init_database()?;
     let task = storage::get_task(&conn, task_id)?;
 
@@ -103,8 +103,10 @@ pub fn stop(task_id: &str, force: bool) -> Result<()> {
     };
     storage::update_task_status(&conn, task_id, status, None)?;
 
-    let pid = task.pid;
-    println!("Process {task_id} ({pid}) has been {status}");
+    if show_output {
+        let pid = task.pid;
+        println!("Process {task_id} ({pid}) has been {status}");
+    }
 
     Ok(())
 }

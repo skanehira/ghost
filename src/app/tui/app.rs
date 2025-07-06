@@ -297,7 +297,8 @@ impl TuiApp {
             let task_id = &task.id;
 
             // Send signal to stop the task (commands::stop handles process group killing)
-            let _ = crate::app::commands::stop(task_id, force);
+            // Use show_output=false to suppress console output in TUI
+            let _ = crate::app::commands::stop(task_id, force, false);
 
             // Refresh task list to update status
             let _ = self.refresh_tasks();
