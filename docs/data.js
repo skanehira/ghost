@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751821955281,
+  "lastUpdate": 1751822904966,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -659,6 +659,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 0.04",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "49651e465dc0c7582f1a4113756441978feca901",
+          "message": "fix: update TUI tests to use temporary database configuration\n\n* Modify init_database to accept optional Config parameter\n* Add init_database_with_config function for test isolation\n* Update TuiApp to use proper database initialization\n* Create TestEnvironment struct with temporary data directories\n* All TUI tests now use isolated temporary databases",
+          "timestamp": "2025-07-07T02:25:51+09:00",
+          "tree_id": "5b0b03024651655cfaaeb7c8225aae87a4188a1f",
+          "url": "https://github.com/skanehira/ghost/commit/49651e465dc0c7582f1a4113756441978feca901"
+        },
+        "date": 1751822904515,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.24",
             "unit": "ns/iter"
           }
         ]
