@@ -6,7 +6,9 @@ use ghost::app::commands;
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
 #[command(about = "A simple background process manager")]
-#[command(long_about = "A simple background process manager.\n\nRun without arguments to start the interactive TUI mode.")]
+#[command(
+    long_about = "A simple background process manager.\n\nRun without arguments to start the interactive TUI mode."
+)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -80,7 +82,6 @@ enum Commands {
         #[arg(short, long)]
         all: bool,
     },
-
 }
 
 #[tokio::main]
