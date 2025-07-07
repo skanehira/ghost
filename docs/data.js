@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751844808466,
+  "lastUpdate": 1751860274724,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -809,6 +809,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.28",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "989cffa345668501d029ef9ba872030223e63d75",
+          "message": "refactor: make TUI the default mode when no arguments provided\n\n- Remove the `tui` subcommand\n- Make CLI commands optional with `Option<Commands>`\n- Launch TUI mode when no arguments are provided\n- Update README to reflect the new usage pattern\n- Improve help message to indicate TUI is the default\n- Clean up unused code in process.rs (empty command check and pgid variable)\n\nThis change makes the tool more intuitive by defaulting to the interactive\nTUI mode when users run `ghost` without any arguments.",
+          "timestamp": "2025-07-07T12:48:24+09:00",
+          "tree_id": "35ab205f2a1fa4df1aeefedaca005c7e5ac83d87",
+          "url": "https://github.com/skanehira/ghost/commit/989cffa345668501d029ef9ba872030223e63d75"
+        },
+        "date": 1751860274224,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.06",
             "unit": "ns/iter"
           }
         ]
