@@ -6,10 +6,11 @@ use ghost::app::commands;
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
 #[command(about = "A simple background process manager")]
+#[command(long_about = "A simple background process manager.\n\nRun without arguments to start the interactive TUI mode.")]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -80,8 +81,6 @@ enum Commands {
         all: bool,
     },
 
-    /// Start TUI mode for interactive task management
-    Tui,
 }
 
 #[tokio::main]
@@ -89,18 +88,18 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Run { command, cwd, env } => commands::spawn(command, cwd, env),
-        Commands::List { status } => commands::list(status),
-        Commands::Log { task_id, follow } => commands::log(&task_id, follow).await,
-        Commands::Stop { task_id, force } => commands::stop(&task_id, force, true),
-        Commands::Status { task_id } => commands::status(&task_id),
-        Commands::Cleanup {
+        Some(Commands::Run { command, cwd, env }) => commands::spawn(command, cwd, env),
+        Some(Commands::List { status }) => commands::list(status),
+        Some(Commands::Log { task_id, follow }) => commands::log(&task_id, follow).await,
+        Some(Commands::Stop { task_id, force }) => commands::stop(&task_id, force, true),
+        Some(Commands::Status { task_id }) => commands::status(&task_id),
+        Some(Commands::Cleanup {
             days,
             status,
             dry_run,
             all,
-        } => commands::cleanup(days, status, dry_run, all),
-        Commands::Tui => commands::tui().await,
+        }) => commands::cleanup(days, status, dry_run, all),
+        None => commands::tui().await, // No subcommand = start TUI
     };
 
     if let Err(e) = result {

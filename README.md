@@ -229,7 +229,11 @@ $ ghost cleanup --status killed --all
 Ghost includes an interactive Terminal User Interface for managing processes:
 
 ```bash
-$ ghost tui
+# Start TUI mode (no arguments)
+$ ghost
+
+# Or you can still use subcommands for CLI operations
+$ ghost list
 ```
 
 **TUI Features:**

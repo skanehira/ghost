@@ -25,12 +25,6 @@ pub fn spawn_background_process(
     cwd: Option<PathBuf>,
     log_dir: Option<PathBuf>,
 ) -> Result<(ProcessInfo, Child)> {
-    if command.is_empty() {
-        return Err(GhostError::ProcessSpawn {
-            message: "Empty command".to_string(),
-        });
-    }
-
     // Generate task ID and prepare paths
     let task_id = Uuid::new_v4().to_string();
     let log_dir = log_dir.unwrap_or_else(crate::app::config::get_log_dir);
@@ -69,11 +63,8 @@ pub fn spawn_background_process(
 
     let pid = child.id();
 
-    // Get process group ID
-    let pgid = {
-        // The process group ID should be the same as PID after setsid()
-        pid as i32
-    };
+    // The process group ID should be the same as PID after setsid()
+    let pgid = pid as i32;
 
     let info = ProcessInfo {
         id: task_id,
