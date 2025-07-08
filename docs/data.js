@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751943427976,
+  "lastUpdate": 1751948500999,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -899,6 +899,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.03,
             "range": "± 0.80",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "2f4685991124fd600a2a8d1a2ab0a9bbf266fe62",
+          "message": "fix: change rust edition to 2021 and improve cargo-cross setup",
+          "timestamp": "2025-07-08T13:19:59+09:00",
+          "tree_id": "4afde1868f25e08d8e0f055c321910f679fda409",
+          "url": "https://github.com/skanehira/ghost/commit/2f4685991124fd600a2a8d1a2ab0a9bbf266fe62"
+        },
+        "date": 1751948500154,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.04,
+            "range": "± 0.19",
             "unit": "ns/iter"
           }
         ]
