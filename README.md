@@ -281,7 +281,7 @@ $ ghost list
 - `Ctrl+n`/`Ctrl+p` or `Ctrl+j`/`Ctrl+k`: Navigate filtered results
 - `Enter`: View logs for selected task
 - `Tab`: Confirm search and return to task list (keeps filter active)
-- `Esc`/`q`: Cancel search and return to full list
+- `Esc`/`q`: Cancel search and return to full list (also works in filtered state)
 
 **Search in Logs:**
 - Log content search feature coming soon
@@ -310,7 +310,7 @@ $ ghost list
    (Search filter + Status filter work together)
 
 5. Clear Search:
-   In filtered state → q → back to full list
+   In filtered state → q or Esc → back to full list
 ```
 
 #### Process Details Viewer

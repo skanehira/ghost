@@ -155,6 +155,18 @@ impl TuiApp {
                     self.should_quit = true;
                 }
             }
+            KeyCode::Esc => {
+                if self.is_search_filtered {
+                    // Clear search filter with Esc key
+                    self.search_query.clear();
+                    self.is_search_filtered = false;
+                    self.filtered_tasks.clear();
+                    self.search_type = None;
+                    self.table_scroll = TableScroll::new();
+                    self.table_scroll.set_total_items(self.tasks.len());
+                }
+                // If not in search filtered state, Esc does nothing (don't quit)
+            }
             KeyCode::Char('j') => {
                 self.table_scroll.next();
             }
