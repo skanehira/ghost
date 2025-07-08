@@ -255,6 +255,7 @@ $ ghost list
 - `j`/`k`: Move selection up/down
 - `g`/`G`: Jump to top/bottom of list
 - `Enter`: View logs for selected task
+- `d`: View process details for selected task
 - `s`: Send SIGTERM to selected task
 - `Ctrl+K`: Send SIGKILL to selected task  
 - `q`: Quit application
@@ -306,6 +307,24 @@ $ ghost list
 5. Clear Search:
    In filtered state → q → back to full list
 ```
+
+#### Process Details Viewer
+
+**Process Details Features:**
+- Shows comprehensive task information including PID, PGID, runtime, and working directory
+- Displays environment variables with scrollable view
+- Command copying functionality for easy reuse
+
+**Process Details Keybindings:**
+- `q`/`Esc`: Return to task list
+- `c`: Copy command to clipboard (macOS)
+- `j`/`k`: Scroll up/down in environment variables
+- `Ctrl+D`/`Ctrl+U`: Page down/up in environment variables
+
+**Information Displayed:**
+- **Basic Info**: Task ID, parsed command, status with runtime, PID/PGID, working directory
+- **Environment Variables**: All environment variables from task execution context
+- **Interactive Features**: Scroll through long environment variable lists
 
 #### Log Viewer
 
