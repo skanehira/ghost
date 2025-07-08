@@ -1,10 +1,10 @@
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect, Size},
     style::{Color, Modifier, Style},
     symbols,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
-    Frame,
 };
 use tui_scrollview::{ScrollView, ScrollViewState, ScrollbarVisibility};
 

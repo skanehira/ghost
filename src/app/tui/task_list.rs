@@ -1,8 +1,8 @@
 use ratatui::{
+    Frame,
     layout::{Constraint, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Cell, Row, StatefulWidget, Table, TableState, Widget},
-    Frame,
 };
 
 // Layout constants
@@ -23,7 +23,7 @@ const COLUMN_CONSTRAINTS: [Constraint; 6] = [
     Constraint::Min(DIRECTORY_COLUMN_MIN_WIDTH),
 ];
 
-use super::{table_state_scroll::TableScroll, App, TaskFilter};
+use super::{App, TaskFilter, table_state_scroll::TableScroll};
 use crate::app::storage::task::Task;
 use crate::app::storage::task_status::TaskStatus;
 

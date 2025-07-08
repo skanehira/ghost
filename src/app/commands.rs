@@ -239,12 +239,12 @@ pub async fn tui() -> Result<()> {
     use crossterm::{
         event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream},
         execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
     };
     use futures::StreamExt;
-    use ratatui::{backend::CrosstermBackend, Terminal};
+    use ratatui::{Terminal, backend::CrosstermBackend};
     use std::io;
-    use tokio::time::{interval, Duration};
+    use tokio::time::{Duration, interval};
 
     use crate::app::tui::app::TuiApp;
 

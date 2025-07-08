@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use ratatui::{layout::Rect, Frame};
+use ratatui::{Frame, layout::Rect};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs;
