@@ -39,6 +39,7 @@ pub struct TuiApp {
     pub log_scroll_state: ScrollViewState,
     pub selected_task_id: Option<String>,
     pub env_scroll_state: ScrollViewState,
+    pub last_render_area: Rect,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
 }
@@ -58,6 +59,7 @@ impl TuiApp {
             log_scroll_state: ScrollViewState::default(),
             selected_task_id: None,
             env_scroll_state: ScrollViewState::default(),
+            last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
         })
@@ -78,6 +80,7 @@ impl TuiApp {
             log_scroll_state: ScrollViewState::default(),
             selected_task_id: None,
             env_scroll_state: ScrollViewState::default(),
+            last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
         })
@@ -158,6 +161,14 @@ impl TuiApp {
                     self.env_scroll_state = ScrollViewState::default();
                 }
             }
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let page_size = self.calculate_table_page_size();
+                self.table_scroll.page_down(page_size);
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let page_size = self.calculate_table_page_size();
+                self.table_scroll.page_up(page_size);
+            }
             _ => {}
         }
 
@@ -194,6 +205,12 @@ impl TuiApp {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.log_scroll_state.scroll_page_down();
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.log_scroll_state.scroll_page_up();
+            }
             _ => {}
         }
 
@@ -217,6 +234,12 @@ impl TuiApp {
             }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
+            }
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.env_scroll_state.scroll_page_down();
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.env_scroll_state.scroll_page_up();
             }
             _ => {}
         }
@@ -247,6 +270,7 @@ impl TuiApp {
     /// Render the TUI
     pub fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
+        self.last_render_area = area;
         match self.view_mode {
             ViewMode::TaskList => self.render_task_list(frame, area),
             ViewMode::LogView => self.render_log_view(frame, area),
@@ -409,5 +433,12 @@ impl TuiApp {
         // Calculate visible offset based on selection
         let selected = self.table_scroll.selected().unwrap_or(0);
         selected.saturating_sub(2) // Keep some context above
+    }
+
+    fn calculate_table_page_size(&self) -> usize {
+        // Calculate the visible height of the table based on last render area
+        // Account for borders (2), header (1), footer separator (1), and footer (1)
+        let overhead = 5;
+        self.last_render_area.height.saturating_sub(overhead) as usize
     }
 }

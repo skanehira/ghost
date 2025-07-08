@@ -216,7 +216,7 @@ impl<'a> TaskListWidget<'a> {
     }
 
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
-        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot";
+        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot  C-d/u:Page";
 
         // Draw the text
         for (i, ch) in keybinds_text.chars().enumerate() {

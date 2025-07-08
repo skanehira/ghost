@@ -216,7 +216,9 @@ impl<'a> ProcessDetailsWidget<'a> {
             Span::styled("[Esc]", Style::default().fg(Color::Yellow)),
             Span::raw(" Back to list  "),
             Span::styled("[j/k]", Style::default().fg(Color::Yellow)),
-            Span::raw(" Scroll env vars"),
+            Span::raw(" Scroll  "),
+            Span::styled("[C-d/C-u]", Style::default().fg(Color::Yellow)),
+            Span::raw(" Page"),
         ];
 
         let keybind_paragraph = Paragraph::new(Line::from(keybinds))

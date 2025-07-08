@@ -98,6 +98,26 @@ impl TableScroll {
             self.state.select(Some(0));
         }
     }
+
+    pub fn page_down(&mut self, page_size: usize) {
+        if self.total_items == 0 || page_size == 0 {
+            return;
+        }
+
+        let current = self.state.selected().unwrap_or(0);
+        let new_index = (current + page_size).min(self.total_items - 1);
+        self.state.select(Some(new_index));
+    }
+
+    pub fn page_up(&mut self, page_size: usize) {
+        if self.total_items == 0 || page_size == 0 {
+            return;
+        }
+
+        let current = self.state.selected().unwrap_or(0);
+        let new_index = current.saturating_sub(page_size);
+        self.state.select(Some(new_index));
+    }
 }
 
 #[cfg(test)]
@@ -247,5 +267,45 @@ mod tests {
         // Previous should stay at 0
         scroll.previous();
         assert_eq!(scroll.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_page_navigation() {
+        let mut scroll = TableScroll::with_items(20);
+
+        // Start at 0
+        assert_eq!(scroll.selected(), Some(0));
+
+        // Page down by 5
+        scroll.page_down(5);
+        assert_eq!(scroll.selected(), Some(5));
+
+        // Page down by 10 more
+        scroll.page_down(10);
+        assert_eq!(scroll.selected(), Some(15));
+
+        // Page down to the end
+        scroll.page_down(10);
+        assert_eq!(scroll.selected(), Some(19)); // Should stop at last item
+
+        // Page up by 5
+        scroll.page_up(5);
+        assert_eq!(scroll.selected(), Some(14));
+
+        // Page up by 20 (should go to start)
+        scroll.page_up(20);
+        assert_eq!(scroll.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_page_navigation_empty() {
+        let mut scroll = TableScroll::with_items(0);
+
+        // Should do nothing on empty table
+        scroll.page_down(5);
+        assert_eq!(scroll.selected(), None);
+
+        scroll.page_up(5);
+        assert_eq!(scroll.selected(), None);
     }
 }
