@@ -213,6 +213,8 @@ impl<'a> ProcessDetailsWidget<'a> {
         let keybinds = vec![
             Span::styled("[q/Esc]", Style::default().fg(Color::Yellow)),
             Span::raw(" Back to list  "),
+            Span::styled("[l]", Style::default().fg(Color::Yellow)),
+            Span::raw(" View logs  "),
             Span::styled("[c]", Style::default().fg(Color::Yellow)),
             Span::raw(" Copy command  "),
             Span::styled("[j/k]", Style::default().fg(Color::Yellow)),

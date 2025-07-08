@@ -274,6 +274,14 @@ impl TuiApp {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
+            KeyCode::Char('d') => {
+                // Switch to process details for the same task
+                if let Some(ref current_task) = self.current_log_task {
+                    self.selected_task_id = Some(current_task.id.clone());
+                    self.view_mode = ViewMode::ProcessDetails;
+                    self.env_scroll_state = ScrollViewState::default();
+                }
+            }
             KeyCode::Char('/') => {
                 self.search_query.clear();
                 self.previous_view_mode = self.view_mode.clone();
@@ -320,6 +328,17 @@ impl TuiApp {
                                 }
                                 child.wait()
                             });
+                    }
+                }
+            }
+            KeyCode::Char('l') => {
+                // Switch to log view for the same task
+                if let Some(task_id) = &self.selected_task_id {
+                    let display_tasks = self.get_display_tasks();
+                    if let Some(task) = display_tasks.iter().find(|t| t.id == *task_id) {
+                        self.current_log_task = Some(task.clone());
+                        self.view_mode = ViewMode::LogView;
+                        self.initialize_log_view();
                     }
                 }
             }
