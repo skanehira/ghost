@@ -20,8 +20,13 @@ Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD
 
 - **Background Process Execution**: Run commands in the background without a daemon
 - **TUI Mode**: Interactive terminal UI for managing processes
-- **Process Management**: Start, stop, and monitor processes
+- **Process Management**: Start, stop, and monitor processes with SIGTERM/SIGKILL
+- **Process Details View**: Comprehensive task information with environment variables
 - **Log Management**: Automatic log file creation and real-time following
+- **Search Functionality**: Real-time process name filtering with persistent state
+- **Cross-View Navigation**: Seamless switching between process details and logs
+- **Command Copying**: Copy task commands to clipboard (macOS)
+- **Short ID Support**: Use abbreviated task IDs for convenience
 - **Working Directory Tracking**: See where each command was executed
 - **No Daemon Required**: Simple one-shot execution model
 
@@ -317,6 +322,7 @@ $ ghost list
 
 **Process Details Keybindings:**
 - `q`/`Esc`: Return to task list
+- `l`: Switch to log view for the same task
 - `c`: Copy command to clipboard (macOS)
 - `j`/`k`: Scroll up/down in environment variables
 - `Ctrl+D`/`Ctrl+U`: Page down/up in environment variables
@@ -326,12 +332,27 @@ $ ghost list
 - **Environment Variables**: All environment variables from task execution context
 - **Interactive Features**: Scroll through long environment variable lists
 
+#### Cross-Navigation Between Views
+
+**Seamless View Switching:**
+- Switch between Process Details and Log View for the same task without returning to task list
+- Maintains task context when transitioning between views
+- Enhances workflow efficiency for debugging and monitoring
+
+**Navigation Flow:**
+```
+Task List → [Enter] → Log View → [d] → Process Details → [l] → Log View
+    ↑              ↗                 ↙              ↖
+    [q/Esc] ──────┘                 └────── [q/Esc]
+```
+
 #### Log Viewer
 
 **Log Viewer Keybindings:**
 - `j`/`k`: Scroll up/down
 - `h`/`l`: Scroll left/right (for long lines)
 - `g`/`G`: Jump to top/bottom
+- `d`: Switch to process details for the same task
 - `Ctrl+D`/`Ctrl+U`: Page down/up
 - `/`: Search within current log (coming soon)
 - `Esc`/`q`: Return to task list
