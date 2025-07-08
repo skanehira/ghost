@@ -895,3 +895,56 @@ fn test_process_details_with_many_env_vars() {
         "Process details with many env vars display does not match expected output"
     );
 }
+
+#[test]
+fn test_log_viewer_with_many_lines() {
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Create test log file with many lines
+    let log_dir = env._temp_dir.path().join("logs");
+    std::fs::create_dir_all(&log_dir).unwrap();
+    let log_path = log_dir.join("test-many-lines.log");
+
+    let mut log_content = String::new();
+    for i in 1..=100 {
+        log_content.push_str(&format!("Line {}: Log message number {}\n", i, i));
+    }
+    std::fs::write(&log_path, log_content).unwrap();
+
+    // Add a task with the log file
+    let tasks = vec![Task {
+        id: "many-lines-test".to_string(),
+        pid: 7777,
+        pgid: Some(7777),
+        command: r#"["tail", "-f", "app.log"]"#.to_string(),
+        env: None,
+        cwd: Some("/var/log".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1000000000,
+        finished_at: None,
+        log_path: log_path.to_string_lossy().to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::LogView;
+
+    // Create a terminal and render the log view
+    let backend = TestBackend::new(80, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| app.render(f)).unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let normalized_output = normalize_buffer_output(&buffer_output);
+
+    let expected = load_expected("log_viewer_many_lines.txt");
+    let normalized_expected = normalize_buffer_output(&expected);
+
+    assert_eq!(
+        normalized_output, normalized_expected,
+        "Log viewer with many lines display does not match expected output"
+    );
+}

@@ -1,7 +1,7 @@
 ┌ log-display-test - test command ─────────────────────────────────────────────┐
-│     1 Line 1: Starting process                                               │
-│     2 Line 2: Processing...                                                  │
-│     3 Line 3: Complete                                                       │
+│1 Line 1: Starting process                                                    │
+│2 Line 2: Processing...                                                       │
+│3 Line 3: Complete                                                            │
 │                                                                              │
 │                                                                              │
 │                                                                              │

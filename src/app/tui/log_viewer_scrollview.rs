@@ -135,11 +135,16 @@ impl StatefulWidget for LogViewerScrollWidget {
         // Render footer
         self.create_footer().render(chunks[1], buf);
 
+        // Calculate line number width based on total lines
+        let line_count = self.lines.len();
+        let line_number_width = line_count.to_string().len().max(1) + 1; // +1 for space
+        let line_number_area_width = line_number_width as u16;
+
         // Calculate content size (lines count, max line width)
         let content_width = self
             .lines
             .iter()
-            .map(|line| line.len() + 7) // +7 for line number
+            .map(|line| line.len() + line_number_width)
             .max()
             .unwrap_or(80) as u16;
 
@@ -179,13 +184,13 @@ impl StatefulWidget for LogViewerScrollWidget {
         let mut scroll_view = ScrollView::new(content_size)
             .scrollbars_visibility(tui_scrollview::ScrollbarVisibility::Never);
 
-        // Create line numbers paragraph
+        // Create line numbers paragraph with dynamic width
         let line_numbers: Vec<Line> = self
             .lines
             .iter()
             .enumerate()
             .map(|(idx, _)| {
-                let line_number = format!("{:6} ", idx + 1);
+                let line_number = format!("{:>width$} ", idx + 1, width = line_number_width - 1);
                 Line::from(Span::styled(
                     line_number,
                     Style::default().fg(Color::DarkGray),
@@ -203,10 +208,18 @@ impl StatefulWidget for LogViewerScrollWidget {
         let content_paragraph = Paragraph::new(content_lines);
 
         // Render line numbers and content inside scroll view
-        scroll_view.render_widget(line_numbers_paragraph, Rect::new(0, 0, 7, content_height));
+        scroll_view.render_widget(
+            line_numbers_paragraph,
+            Rect::new(0, 0, line_number_area_width, content_height),
+        );
         scroll_view.render_widget(
             content_paragraph,
-            Rect::new(7, 0, content_width.saturating_sub(7), content_height),
+            Rect::new(
+                line_number_area_width,
+                0,
+                content_width.saturating_sub(line_number_area_width),
+                content_height,
+            ),
         );
 
         // Render the scroll view in the inner content area
@@ -271,10 +284,10 @@ mod tests {
         assert!(content.contains("h/l:Horizontal"));
         assert!(content.contains("gg/G:Top/Bottom"));
 
-        // Check content with line numbers
-        assert!(content.contains("     1 Line 1"));
-        assert!(content.contains("     2 Line 2"));
-        assert!(content.contains("     3 Line 3"));
+        // Check content with line numbers (dynamic width)
+        assert!(content.contains("1 Line 1"));
+        assert!(content.contains("2 Line 2"));
+        assert!(content.contains("3 Line 3"));
     }
 
     #[test]

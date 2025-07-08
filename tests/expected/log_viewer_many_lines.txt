@@ -1,0 +1,15 @@
+┌ many-lines-test - tail -f app.log ───────────────────────────────────────────┐
+│  1 Line 1: Log message number 1                                              │
+│  2 Line 2: Log message number 2                                              │
+│  3 Line 3: Log message number 3                                              │
+│  4 Line 4: Log message number 4                                              │
+│  5 Line 5: Log message number 5                                              │
+│  6 Line 6: Log message number 6                                              │
+│  7 Line 7: Log message number 7                                              │
+│  8 Line 8: Log message number 8                                              │
+│  9 Line 9: Log message number 9                                              │
+│ 10 Line 10: Log message number 10                                            │
+│ 11 Line 11: Log message number 11                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  Esc:Back  q:Quit                │
+└──────────────────────────────────────────────────────────────────────────────┘
