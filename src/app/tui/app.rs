@@ -308,7 +308,7 @@ impl TuiApp {
 
     fn handle_process_details_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            KeyCode::Esc => {
+            KeyCode::Esc | KeyCode::Char('q') => {
                 self.view_mode = ViewMode::TaskList;
                 self.env_scroll_state = ScrollViewState::default();
             }
@@ -317,10 +317,6 @@ impl TuiApp {
             }
             KeyCode::Char('k') => {
                 self.env_scroll_state.scroll_up();
-            }
-            KeyCode::Char('q') => {
-                self.view_mode = ViewMode::TaskList;
-                self.env_scroll_state = ScrollViewState::default();
             }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
@@ -388,13 +384,14 @@ impl TuiApp {
                 }
             }
             KeyCode::Tab => {
-                // Confirm search filtering and return to task list
+                // Only confirm search if there's actually a search query
                 if !self.search_query.is_empty() {
                     self.is_search_filtered = true;
+                    self.view_mode = ViewMode::TaskList;
+                    // Keep current selection position, just update total items
+                    self.table_scroll.set_total_items(self.get_display_tasks().len());
                 }
-                self.view_mode = ViewMode::TaskList;
-                // Keep current selection position, just update total items
-                self.table_scroll.set_total_items(self.get_display_tasks().len());
+                // If search query is empty, do nothing (don't change modes)
             }
             // Navigation in search mode with Ctrl-n/p and Ctrl-j/k
             KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
