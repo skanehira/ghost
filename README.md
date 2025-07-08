@@ -256,8 +256,8 @@ $ ghost list
 - `g`/`G`: Jump to top/bottom of list
 - `Enter`: View logs for selected task
 - `d`: View process details for selected task
-- `s`: Send SIGTERM to selected task
-- `Ctrl+K`: Send SIGKILL to selected task  
+- `s`: Stop task (SIGTERM - graceful termination)
+- `Ctrl+K`: Kill task (SIGKILL - forced termination)  
 - `q`: Quit application
 
 #### Task Filtering
@@ -279,7 +279,7 @@ $ ghost list
 - `Esc`/`q`: Cancel search and return to full list
 
 **Search in Logs:**
-- `Ctrl+G`: Start search mode for log content (coming soon)
+- Log content search feature coming soon
 
 **Search Mode Features:**
 - Real-time filtering as you type

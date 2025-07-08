@@ -216,12 +216,13 @@ impl TuiApp {
                 self.view_mode = ViewMode::SearchProcessName;
                 self.search_type = Some(SearchType::ProcessName);
             }
-            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) && !self.tasks.is_empty() => {
-                self.search_query.clear();
-                self.previous_view_mode = self.view_mode.clone();
-                self.view_mode = ViewMode::SearchLogContent;
-                self.search_type = Some(SearchType::LogContent);
-            }
+            // Ctrl+G log content search temporarily disabled (not yet implemented)
+            // KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) && !self.tasks.is_empty() => {
+            //     self.search_query.clear();
+            //     self.previous_view_mode = self.view_mode.clone();
+            //     self.view_mode = ViewMode::SearchLogContent;
+            //     self.search_type = Some(SearchType::LogContent);
+            // }
             _ => {}
         }
 
@@ -689,10 +690,8 @@ impl TuiApp {
                         command.to_lowercase().contains(&query)
                     }
                     Some(SearchType::LogContent) => {
-                        // TODO: Search in log file content
-                        // For now, search in command
-                        let command = self.parse_command(&task.command);
-                        command.to_lowercase().contains(&query)
+                        // Log content search not yet implemented
+                        false
                     }
                     None => false,
                 }
