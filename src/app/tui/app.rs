@@ -357,14 +357,6 @@ impl TuiApp {
             KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.table_scroll.previous();
             }
-            // Log view access during search (alternative to Enter)
-            KeyCode::Char('l') => {
-                let display_tasks = self.get_display_tasks();
-                if !display_tasks.is_empty() {
-                    self.view_mode = ViewMode::LogView;
-                    self.initialize_log_view();
-                }
-            }
             KeyCode::Backspace => {
                 self.search_query.pop();
                 // Update filtering immediately

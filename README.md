@@ -252,7 +252,7 @@ $ ghost list
 **Basic Navigation:**
 - `j`/`k`: Move selection up/down
 - `g`/`G`: Jump to top/bottom of list
-- `l`/`Enter`: View logs for selected task
+- `Enter`: View logs for selected task
 - `s`: Send SIGTERM to selected task
 - `Ctrl+K`: Send SIGKILL to selected task  
 - `q`: Quit application
