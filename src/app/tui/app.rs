@@ -212,6 +212,9 @@ impl TuiApp {
             KeyCode::Char('k') => {
                 self.env_scroll_state.scroll_up();
             }
+            KeyCode::Char('q') => {
+                self.should_quit = true;
+            }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }

@@ -583,6 +583,16 @@ fn test_process_details_navigation() {
     let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
     app.handle_key(key_esc).unwrap();
     assert_eq!(app.view_mode, ViewMode::TaskList);
+    assert!(!app.should_quit());
+
+    // Go back to process details and test q key
+    app.handle_key(key_enter).unwrap();
+    assert_eq!(app.view_mode, ViewMode::ProcessDetails);
+
+    // Press q to quit
+    let key_q = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE);
+    app.handle_key(key_q).unwrap();
+    assert!(app.should_quit());
 }
 
 #[test]
@@ -646,6 +656,7 @@ fn test_process_details_display() {
     assert!(full_content.contains("Directory: /tmp/test"));
     assert!(full_content.contains("Environment Variables"));
     assert!(full_content.contains("TEST_VAR=test_value"));
+    assert!(full_content.contains("[q] Quit"));
     assert!(full_content.contains("[Esc] Back to list"));
     assert!(full_content.contains("[j/k] Scroll env vars"));
 }
