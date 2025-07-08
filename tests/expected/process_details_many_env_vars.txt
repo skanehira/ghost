@@ -1,7 +1,7 @@
 ┌ Process Details ─────────────────────────────────────────────────────────────┐
 │Task ID: abc12345-6789-1234-5678-123456789abc                                 │
 │Command: npm run dev                                                          │
-│Status: running (13286h 37m 4s)                                               │
+│Status: running (13286h 37m 4s)                                              │
 │PID: 12345 | PGID: 12345                                                      │
 │Directory: /home/user/projects/myapp                                          │
 └──────────────────────────────────────────────────────────────────────────────┘
