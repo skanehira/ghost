@@ -595,6 +595,7 @@ dependencies = [
  "notify",
  "pretty_assertions",
  "ratatui",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",

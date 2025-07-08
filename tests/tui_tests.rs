@@ -124,6 +124,13 @@ fn normalize_buffer_output(output: &str) -> String {
         .join("\n")
 }
 
+/// Helper function to normalize dynamic values like runtime for comparison
+fn normalize_dynamic_output(output: &str) -> String {
+    // Replace runtime patterns like "13286h 37m 52s" with a placeholder
+    let re = regex::Regex::new(r"\d+h \d+m \d+s|\d+m \d+s|\d+s").unwrap();
+    re.replace_all(output, "<RUNTIME>").to_string()
+}
+
 #[test]
 fn test_empty_task_list_display() {
     let backend = TestBackend::new(75, 12);
@@ -622,41 +629,269 @@ fn test_process_details_display() {
     app.selected_task_id = Some("test-task-id".to_string());
 
     // Create a terminal and render the process details view
-    let backend = TestBackend::new(80, 24);
+    let backend = TestBackend::new(80, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| app.render(f)).unwrap();
 
-    // Get the buffer content
-    let buffer = terminal.backend().buffer();
-    let area = buffer.area();
-    let content: Vec<String> = (0..area.height)
-        .map(|y| {
-            (0..area.width)
-                .map(|x| buffer.cell((x, y)).unwrap().symbol().to_string())
-                .collect::<String>()
-                .trim_end()
-                .to_string()
-        })
-        .collect();
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let normalized_output = normalize_buffer_output(&buffer_output);
+    let normalized_output = normalize_dynamic_output(&normalized_output);
 
-    // Verify key elements are displayed
-    let full_content = content.join("\n");
+    let expected = load_expected("process_details_display.txt");
+    let normalized_expected = normalize_buffer_output(&expected);
+    let normalized_expected = normalize_dynamic_output(&normalized_expected);
 
-    // Debug output
-    if !full_content.contains("Process Details") {
-        eprintln!("Full content:\n{}", full_content);
-    }
+    assert_eq!(
+        normalized_output, normalized_expected,
+        "Process details display does not match expected output"
+    );
+}
 
-    assert!(full_content.contains("Process Details"));
-    assert!(full_content.contains("Task ID: test-task-id"));
-    assert!(full_content.contains("Command: echo hello world"));
-    assert!(full_content.contains("Status: exited") || full_content.contains("Status: Exited"));
-    assert!(full_content.contains("PID: 5678"));
-    assert!(full_content.contains("PGID: 5678"));
-    assert!(full_content.contains("Directory: /tmp/test"));
-    assert!(full_content.contains("Environment Variables"));
-    assert!(full_content.contains("TEST_VAR=test_value"));
-    assert!(full_content.contains("[q] Quit"));
-    assert!(full_content.contains("[Esc] Back to list"));
-    assert!(full_content.contains("[j/k] Scroll env vars"));
+#[test]
+fn test_log_viewer_navigation() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task with a log file
+    let tasks = vec![Task {
+        id: "log-test-task".to_string(),
+        pid: 9999,
+        pgid: Some(9999),
+        command: r#"["echo", "test"]"#.to_string(),
+        env: None,
+        cwd: Some("/tmp".to_string()),
+        status: TaskStatus::Exited,
+        exit_code: Some(0),
+        started_at: 1000000000,
+        finished_at: Some(1000001000),
+        log_path: "/tmp/ghost/logs/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+
+    // Initial view should be TaskList
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+
+    // Press 'l' to view logs
+    let key_l = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE);
+    app.handle_key(key_l).unwrap();
+    assert_eq!(app.view_mode, ViewMode::LogView);
+
+    // Test log viewer navigation keys
+    // Press 'j' to scroll down
+    let key_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+    app.handle_key(key_j).unwrap();
+
+    // Press 'k' to scroll up
+    let key_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+    app.handle_key(key_k).unwrap();
+
+    // Press 'g' to go to top
+    let key_g = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE);
+    app.handle_key(key_g).unwrap();
+
+    // Press 'G' to go to bottom
+    let key_g_upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
+    app.handle_key(key_g_upper).unwrap();
+
+    // Press 'h' to scroll left
+    let key_h = KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE);
+    app.handle_key(key_h).unwrap();
+
+    // Press 'l' to scroll right
+    let key_l_scroll = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE);
+    app.handle_key(key_l_scroll).unwrap();
+
+    // Press Esc to go back to task list
+    let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+    app.handle_key(key_esc).unwrap();
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+}
+
+#[test]
+fn test_integrated_navigation_flow() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add multiple tasks with different statuses
+    let tasks = vec![
+        Task {
+            id: "task-1".to_string(),
+            pid: 1001,
+            pgid: Some(1001),
+            command: r#"["sleep", "60"]"#.to_string(),
+            env: Some(r#"[["VAR1","value1"]]"#.to_string()),
+            cwd: Some("/home/user".to_string()),
+            status: TaskStatus::Running,
+            exit_code: None,
+            started_at: 1000000000,
+            finished_at: None,
+            log_path: "/tmp/ghost/logs/task-1.log".to_string(),
+        },
+        Task {
+            id: "task-2".to_string(),
+            pid: 1002,
+            pgid: Some(1002),
+            command: r#"["echo", "done"]"#.to_string(),
+            env: Some(r#"[["VAR2","value2"]]"#.to_string()),
+            cwd: Some("/tmp".to_string()),
+            status: TaskStatus::Exited,
+            exit_code: Some(0),
+            started_at: 1000000100,
+            finished_at: Some(1000000200),
+            log_path: "/tmp/ghost/logs/task-2.log".to_string(),
+        },
+    ];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(2);
+
+    // Start in task list
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+    assert_eq!(app.selected_index(), 0);
+
+    // Navigate down to second task
+    let key_j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+    app.handle_key(key_j).unwrap();
+    assert_eq!(app.selected_index(), 1);
+
+    // View process details of second task
+    let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+    app.handle_key(key_enter.clone()).unwrap();
+    assert_eq!(app.view_mode, ViewMode::ProcessDetails);
+    assert_eq!(app.selected_task_id, Some("task-2".to_string()));
+
+    // Go back to task list
+    let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+    app.handle_key(key_esc.clone()).unwrap();
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+
+    // Navigate back to first task
+    let key_k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+    app.handle_key(key_k).unwrap();
+    assert_eq!(app.selected_index(), 0);
+
+    // View logs of first task
+    let key_l = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE);
+    app.handle_key(key_l).unwrap();
+    assert_eq!(app.view_mode, ViewMode::LogView);
+
+    // Go back and view process details
+    app.handle_key(key_esc.clone()).unwrap();
+    app.handle_key(key_enter).unwrap();
+    assert_eq!(app.view_mode, ViewMode::ProcessDetails);
+    assert_eq!(app.selected_task_id, Some("task-1".to_string()));
+
+    // Test filter cycling from details view
+    app.handle_key(key_esc).unwrap();
+    let key_tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+    app.handle_key(key_tab).unwrap();
+    assert_eq!(app.filter, TaskFilter::Running);
+
+    // Quit from task list
+    let key_q = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE);
+    app.handle_key(key_q).unwrap();
+    assert!(app.should_quit());
+}
+
+#[test]
+fn test_log_viewer_display() {
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Create test log file
+    let log_dir = env._temp_dir.path().join("logs");
+    std::fs::create_dir_all(&log_dir).unwrap();
+    let log_path = log_dir.join("test-log.log");
+    std::fs::write(
+        &log_path,
+        "Line 1: Starting process\nLine 2: Processing...\nLine 3: Complete\n",
+    )
+    .unwrap();
+
+    // Add a task with the log file
+    let tasks = vec![Task {
+        id: "log-display-test".to_string(),
+        pid: 8888,
+        pgid: Some(8888),
+        command: r#"["test", "command"]"#.to_string(),
+        env: None,
+        cwd: Some("/tmp".to_string()),
+        status: TaskStatus::Exited,
+        exit_code: Some(0),
+        started_at: 1000000000,
+        finished_at: Some(1000001000),
+        log_path: log_path.to_string_lossy().to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::LogView;
+
+    // Create a terminal and render the log view
+    let backend = TestBackend::new(80, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| app.render(f)).unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let normalized_output = normalize_buffer_output(&buffer_output);
+
+    let expected = load_expected("log_viewer_display.txt");
+    let normalized_expected = normalize_buffer_output(&expected);
+
+    assert_eq!(
+        normalized_output, normalized_expected,
+        "Log viewer display does not match expected output"
+    );
+}
+
+#[test]
+fn test_process_details_with_many_env_vars() {
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task with many environment variables
+    let tasks = vec![Task {
+        id: "abc12345-6789-1234-5678-123456789abc".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["npm", "run", "dev"]"#.to_string(),
+        env: Some(r#"[["NODE_ENV","development"],["PORT","3000"],["DATABASE_URL","postgresql://localhost:5432/mydb"],["API_KEY","secret123"],["DEBUG","true"],["LOG_LEVEL","verbose"]]"#.to_string()),
+        cwd: Some("/home/user/projects/myapp".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1704109200, // 2024-01-01 10:00 UTC  
+        finished_at: None,
+        log_path: "/tmp/ghost/logs/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::ProcessDetails;
+    app.selected_task_id = Some("abc12345-6789-1234-5678-123456789abc".to_string());
+
+    // Create a terminal and render the process details view
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| app.render(f)).unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let normalized_output = normalize_buffer_output(&buffer_output);
+    let normalized_output = normalize_dynamic_output(&normalized_output);
+
+    let expected = load_expected("process_details_many_env_vars.txt");
+    let normalized_expected = normalize_buffer_output(&expected);
+    let normalized_expected = normalize_dynamic_output(&normalized_expected);
+
+    assert_eq!(
+        normalized_output, normalized_expected,
+        "Process details with many env vars display does not match expected output"
+    );
 }
