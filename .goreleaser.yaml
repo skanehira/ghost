@@ -19,7 +19,6 @@ builds:
   - id: "ghost"
     builder: rust
     tool: cross
-    command: build
     binary: ghost
     flags:
       - --release
