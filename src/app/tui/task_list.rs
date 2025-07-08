@@ -156,34 +156,7 @@ impl<'a> Widget for TaskListWidget<'a> {
 impl<'a> TaskListWidget<'a> {
     fn render_table_content(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
         if self.tasks.is_empty() {
-            // Empty state
-            let rows = vec![
-                Row::new(vec![
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                ]),
-                Row::new(vec![
-                    Cell::from(""),
-                    Cell::from("No tasks"),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                ]),
-                Row::new(vec![
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                    Cell::from(""),
-                ]),
-            ];
-
+            let rows: Vec<Row<'_>> = vec![];
             let table = Table::new(rows, COLUMN_CONSTRAINTS).header(self.create_header_row());
 
             ratatui::widgets::Widget::render(table, area, buf);
