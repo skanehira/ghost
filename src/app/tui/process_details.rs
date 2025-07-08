@@ -211,8 +211,6 @@ impl<'a> ProcessDetailsWidget<'a> {
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
         // Render keybinds
         let keybinds = vec![
-            Span::styled("[q/Esc]", Style::default().fg(Color::Yellow)),
-            Span::raw(" Back to list  "),
             Span::styled("[l]", Style::default().fg(Color::Yellow)),
             Span::raw(" View logs  "),
             Span::styled("[c]", Style::default().fg(Color::Yellow)),
@@ -220,7 +218,9 @@ impl<'a> ProcessDetailsWidget<'a> {
             Span::styled("[j/k]", Style::default().fg(Color::Yellow)),
             Span::raw(" Scroll  "),
             Span::styled("[C-d/C-u]", Style::default().fg(Color::Yellow)),
-            Span::raw(" Page"),
+            Span::raw(" Page  "),
+            Span::styled("[q/Esc]", Style::default().fg(Color::Yellow)),
+            Span::raw(" Back to list"),
         ];
 
         let keybind_paragraph = Paragraph::new(Line::from(keybinds))

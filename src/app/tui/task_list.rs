@@ -275,12 +275,12 @@ impl<'a> TaskListWidget<'a> {
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
         let keybinds_text = if let Some(ref query) = self.search_query {
             if query.is_empty() {
-                " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  q:Quit  Tab:Status Filter".to_string()
+                " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
             } else {
-                format!(" Search Filter: '{}' - q/Esc:Clear  C-n/p:Move  Enter:Log  Tab:Status Filter", query)
+                format!(" Search Filter: '{}' - C-n/p:Move  Enter:Log  Tab:Status Filter  q/Esc:Clear", query)
             }
         } else {
-            " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  q:Quit  Tab:Status Filter".to_string()
+            " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
         };
 
         // Draw the text

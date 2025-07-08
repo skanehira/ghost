@@ -244,11 +244,11 @@ impl TuiApp {
     fn handle_log_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => {
-                // Return to appropriate view mode (task list or keep search filtered state)
-                if self.is_search_filtered {
-                    self.view_mode = ViewMode::TaskList;
-                } else {
-                    self.view_mode = ViewMode::TaskList;
+                // Return to task list and restore search filter state if needed
+                self.view_mode = ViewMode::TaskList;
+                // If we have a search query, ensure search filtered state is restored
+                if !self.search_query.is_empty() {
+                    self.is_search_filtered = true;
                 }
                 self.log_scroll_state.scroll_to_top();
                 // Clear the current log task
@@ -309,7 +309,12 @@ impl TuiApp {
     fn handle_process_details_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => {
+                // Return to task list and restore search filter state if needed
                 self.view_mode = ViewMode::TaskList;
+                // If we have a search query, ensure search filtered state is restored
+                if !self.search_query.is_empty() {
+                    self.is_search_filtered = true;
+                }
                 self.env_scroll_state = ScrollViewState::default();
             }
             KeyCode::Char('j') => {
@@ -512,9 +517,9 @@ impl TuiApp {
 
         // Render search input at bottom with help text
         let (search_title, help_text) = match self.view_mode {
-            ViewMode::SearchProcessName => ("Search Process Name", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
-            ViewMode::SearchLogContent => ("Search in Logs (grep)", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
-            ViewMode::SearchInLog => ("Search in Current Log", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
+            ViewMode::SearchProcessName => ("Search Process Name", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
+            ViewMode::SearchLogContent => ("Search in Logs (grep)", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
+            ViewMode::SearchInLog => ("Search in Current Log", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
             _ => ("Search", " Enter:Log  Tab:Execute  Esc:Cancel"),
         };
 
