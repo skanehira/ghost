@@ -111,12 +111,16 @@ $ ghost list --status running
 #### View task logs
 
 ```bash
-# View logs for a specific task
+# View logs for a specific task (full UUID)
 $ ghost log 9fe034eb-2ce7-4809-af10-2c99af15583d
 Hello, World
 
+# View logs using short ID (more convenient)
+$ ghost log 9fe034eb
+Hello, World
+
 # View logs for a script with multiple outputs
-$ ghost log c3d4e5f6-g7h8-9012-cdef-345678901234
+$ ghost log c3d4e5f6
 Starting script execution...
 Processing file 1/10
 Processing file 2/10
@@ -124,7 +128,7 @@ Processing file 2/10
 Script completed successfully
 
 # Follow logs in real-time (like tail -f)
-$ ghost log -f e56ed5f8-44c8-4905-97aa-651164afd37e
+$ ghost log -f e56ed5f8
 Following logs for task e56ed5f8-44c8-4905-97aa-651164afd37e (Ctrl+C to stop):
 Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-97aa-651164afd37e.log
 ----------------------------------------
@@ -136,8 +140,8 @@ Processing file 2/10
 #### Check task status
 
 ```bash
-# Get detailed information about a running task
-$ ghost status e56ed5f8-44c8-4905-97aa-651164afd37e
+# Get detailed information about a running task (using short ID)
+$ ghost status e56ed5f8
 Task: e56ed5f8-44c8-4905-97aa-651164afd37e
 PID: 8969
 Status: running
@@ -147,7 +151,7 @@ Started: 2025-07-01 15:36:23
 Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-97aa-651164afd37e.log
 
 # Get detailed information about a completed task
-$ ghost status 9fe034eb-2ce7-4809-af10-2c99af15583d
+$ ghost status 9fe034eb
 Task: 9fe034eb-2ce7-4809-af10-2c99af15583d
 PID: 8730
 Status: exited
@@ -162,16 +166,16 @@ Log file: /Users/user/Library/Application Support/ghost/logs/9fe034eb-2ce7-4809-
 #### Stop a running task
 
 ```bash
-# Gracefully stop a task (SIGTERM)
-$ ghost stop e56ed5f8-44c8-4905-97aa-651164afd37e
-Process e56ed5f8-44c8-4905-97aa-651164afd37e (8969) has been exited
+# Gracefully stop a task (SIGTERM) using short ID
+$ ghost stop e56ed5f8
+Process e56ed5f8 (8969) has been exited
 
-# Force kill a task (SIGKILL)
-$ ghost stop c3d4e5f6-g7h8-9012-cdef-345678901234 --force
-Process c3d4e5f6-g7h8-9012-cdef-345678901234 (12347) has been killed
+# Force kill a task (SIGKILL) using short ID
+$ ghost stop c3d4e5f6 --force
+Process c3d4e5f6 (12347) has been killed
 
 # Try to stop an already stopped task
-$ ghost stop 9fe034eb-2ce7-4809-af10-2c99af15583d
+$ ghost stop 9fe034eb
 Error: Task operation failed: 9fe034eb-2ce7-4809-af10-2c99af15583d - Task is not running (status: exited)
 ```
 
@@ -238,24 +242,110 @@ $ ghost list
 
 **TUI Features:**
 - Real-time process status updates (refreshes every second)
-- Interactive task management
-- Log viewer with line numbers
-- Keyboard navigation
+- Interactive task management with search functionality
+- Log viewer with line numbers and scrolling
+- Keyboard navigation and filtering
+- Short ID display for better readability
 
-**Task List Keybindings:**
+#### Task List Navigation
+
+**Basic Navigation:**
 - `j`/`k`: Move selection up/down
 - `g`/`G`: Jump to top/bottom of list
-- `l`: View logs for selected task
+- `l`/`Enter`: View logs for selected task
 - `s`: Send SIGTERM to selected task
 - `Ctrl+K`: Send SIGKILL to selected task  
-- `q`: Quit
-- `Tab`: Switch between task filters (All/Running/Exited/Killed)
+- `q`: Quit application
+
+#### Task Filtering
+
+**Status Filters (Tab key):**
+- `Tab`: Cycle through status filters:
+  - **All** → **Running** → **Exited** → **Killed** → **All**
+- Filter status is shown in title bar: `[Filter: Running]`
+- Tab filtering works in any mode (normal list or search filtered)
+
+#### Search Functionality
+
+**Search Process Names:**
+- `/`: Start search mode for process names
+- Type to filter tasks in real-time
+- `Ctrl+n`/`Ctrl+p` or `Ctrl+j`/`Ctrl+k`: Navigate filtered results
+- `Enter`: View logs for selected task
+- `Tab`: Confirm search and return to task list (keeps filter active)
+- `Esc`/`q`: Cancel search and return to full list
+
+**Search in Logs:**
+- `Ctrl+G`: Start search mode for log content (coming soon)
+
+**Search Mode Features:**
+- Real-time filtering as you type
+- Shows match count in search bar
+- Search state persists when viewing logs and returning
+- Combine search filters with status filters using Tab
+
+#### Search Workflow Examples
+
+```
+1. Basic Search:
+   / → type "npm" → Ctrl+n/p to navigate → Enter to view logs
+
+2. Search + Status Filter:
+   / → type "npm" → Tab to confirm → Tab again to filter by Running
+   (Footer shows: "Filtered by: 'npm' - Tab:Filter" indicating Tab is available)
+
+3. Search + Log View:
+   / → type "build" → Ctrl+n to select → Enter → view logs → Esc → still filtered
+
+4. Multiple Filters Combined:
+   / → type "npm" → Tab to confirm → Tab multiple times to cycle status filters
+   (Search filter + Status filter work together)
+
+5. Clear Search:
+   In filtered state → q → back to full list
+```
+
+#### Log Viewer
 
 **Log Viewer Keybindings:**
 - `j`/`k`: Scroll up/down
 - `h`/`l`: Scroll left/right (for long lines)
 - `g`/`G`: Jump to top/bottom
-- `Esc`: Return to task list
+- `Ctrl+D`/`Ctrl+U`: Page down/up
+- `/`: Search within current log (coming soon)
+- `Esc`/`q`: Return to task list
+- Maintains search filter state when returning
+
+#### Status Indicators
+
+**Task Status Colors:**
+- **Green**: Running tasks
+- **Blue**: Exited tasks  
+- **Red**: Killed tasks
+- **Gray**: Unknown status
+
+#### Short ID Support
+
+**ID Display:**
+- Shows short IDs (e.g., `550ef353`) instead of full UUIDs for better readability
+- Short IDs are unique prefixes extracted from the full UUID (before first hyphen)
+- Compatible with all CLI commands (`log`, `status`, `stop`)
+
+**Examples:**
+```bash
+# Full UUID: 550ef353-2065-4362-a489-f98554051064
+# Short ID:  550ef353
+
+# All these commands are equivalent:
+$ ghost log 550ef353-2065-4362-a489-f98554051064  # Full UUID
+$ ghost log 550ef353                              # Short ID
+$ ghost status 550ef353                           # Works with any command
+$ ghost stop 550ef353                             # Convenient and readable
+```
+
+**Error Handling:**
+- If multiple tasks match a short ID prefix, an error is shown with suggestions
+- If no tasks match, a clear "Task not found" error is displayed
 
 ### Key Features
 

@@ -6,7 +6,7 @@ use ratatui::{
 };
 
 // Layout constants
-const ID_COLUMN_WIDTH: u16 = 38; // Full UUID (36 chars) + 2 for padding
+const ID_COLUMN_WIDTH: u16 = 10; // Short ID (8 chars) + 2 for padding
 const PID_COLUMN_WIDTH: u16 = 8;
 const STATUS_COLUMN_WIDTH: u16 = 9;
 const STARTED_COLUMN_WIDTH: u16 = 16;
@@ -30,20 +30,21 @@ use crate::app::storage::task_status::TaskStatus;
 impl App {
     pub fn render_task_list(&mut self, frame: &mut Frame, area: Rect) {
         let task_list_widget =
-            TaskListWidget::new(&self.tasks, &self.filter, &mut self.table_scroll);
+            TaskListWidget::new(self.tasks.clone(), &self.filter, &mut self.table_scroll);
         frame.render_widget(task_list_widget, area);
     }
 }
 
 pub struct TaskListWidget<'a> {
-    tasks: &'a [Task],
+    tasks: Vec<Task>,
     filter: &'a TaskFilter,
     table_scroll: &'a mut TableScroll,
+    search_query: Option<String>,  // 検索クエリ表示用
 }
 
 impl<'a> TaskListWidget<'a> {
     pub fn new(
-        tasks: &'a [Task],
+        tasks: Vec<Task>,
         filter: &'a TaskFilter,
         table_scroll: &'a mut TableScroll,
     ) -> Self {
@@ -51,6 +52,21 @@ impl<'a> TaskListWidget<'a> {
             tasks,
             filter,
             table_scroll,
+            search_query: None,
+        }
+    }
+
+    pub fn with_search(
+        tasks: Vec<Task>,
+        filter: &'a TaskFilter,
+        table_scroll: &'a mut TableScroll,
+        search_query: String,
+    ) -> Self {
+        Self {
+            tasks,
+            filter,
+            table_scroll,
+            search_query: Some(search_query),
         }
     }
 
@@ -83,6 +99,20 @@ impl<'a> TaskListWidget<'a> {
         use chrono::{DateTime, Utc};
         let dt = DateTime::<Utc>::from_timestamp(timestamp, 0).unwrap();
         dt.format("%Y-%m-%d %H:%M").to_string()
+    }
+
+    fn format_short_id(&self, full_id: &str) -> String {
+        // Extract the part before the first hyphen
+        if let Some(pos) = full_id.find('-') {
+            full_id[..pos].to_string()
+        } else {
+            // If no hyphen found, return first 8 characters
+            if full_id.len() > 8 {
+                full_id[..8].to_string()
+            } else {
+                full_id.to_string()
+            }
+        }
     }
 
     fn create_header_row(&self) -> Row {
@@ -156,7 +186,34 @@ impl<'a> Widget for TaskListWidget<'a> {
 impl<'a> TaskListWidget<'a> {
     fn render_table_content(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
         if self.tasks.is_empty() {
-            let rows: Vec<Row<'_>> = vec![];
+            // Empty state
+            let rows = vec![
+                Row::new(vec![
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                ]),
+                Row::new(vec![
+                    Cell::from(""),
+                    Cell::from("No tasks"),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                ]),
+                Row::new(vec![
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                ]),
+            ];
+
             let table = Table::new(rows, COLUMN_CONSTRAINTS).header(self.create_header_row());
 
             ratatui::widgets::Widget::render(table, area, buf);
@@ -168,7 +225,7 @@ impl<'a> TaskListWidget<'a> {
                 .map(|task| {
                     let status_style = self.status_style(&task.status);
 
-                    let task_id = &task.id;
+                    let short_id = self.format_short_id(&task.id);
                     let pid = task.pid;
                     let status = task.status.as_str();
                     let timestamp = self.format_timestamp(task.started_at);
@@ -176,7 +233,7 @@ impl<'a> TaskListWidget<'a> {
                     let directory = task.cwd.as_deref().unwrap_or("-");
 
                     Row::new(vec![
-                        Cell::from(format!(" {task_id}")), // Show full ID
+                        Cell::from(format!(" {short_id}")), // Show short ID
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
                         Cell::from(format!(" {timestamp}")),
@@ -216,7 +273,15 @@ impl<'a> TaskListWidget<'a> {
     }
 
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
-        let keybinds_text = " j/k:Move  l:Log  s/C-k:Stop  q:Quit  g/G:Top/Bot  C-d/u:Page";
+        let keybinds_text = if let Some(ref query) = self.search_query {
+            if query.is_empty() {
+                " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s/C-k:Stop  /:Search  C-g:Grep  q:Quit  Tab:Status Filter".to_string()
+            } else {
+                format!(" Search Filter: '{}' - q/Esc:Clear  C-n/p:Move  Enter:Log  Tab:Status Filter", query)
+            }
+        } else {
+            " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s/C-k:Stop  /:Search  C-g:Grep  q:Quit  Tab:Status Filter".to_string()
+        };
 
         // Draw the text
         for (i, ch) in keybinds_text.chars().enumerate() {

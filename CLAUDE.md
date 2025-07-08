@@ -2,6 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 重要な開発注意点
+
+### CRITICAL: ビルド後は必ずインストールする
+- **すべてのコード変更後、必ず `cargo build --release` → `cp target/release/ghost ~/.local/bin/` を実行**
+- **理由**: 開発中のバイナリをテストするため、常に最新版をインストールする必要がある
+- **忘れがち**: コミット前やテスト前に必ずインストールを確認すること
+- **手順**:
+  1. `cargo build --release`  
+  2. `cp target/release/ghost ~/.local/bin/`
+  3. テスト実行やコミット
+
+### 開発ワークフロー
+```bash
+# 必須の手順
+1. コード変更
+2. cargo build --release
+3. cp target/release/ghost ~/.local/bin/  # 絶対に忘れない！
+4. テスト実行
+5. git add & commit
+```
+
 ## Project Overview
 
 Ghost is a simple shell command management tool written in Rust that provides:

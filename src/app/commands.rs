@@ -3,6 +3,24 @@ use std::path::PathBuf;
 use crate::app::{config, display, error, error::Result, helpers, process, storage};
 use rusqlite::Connection;
 
+/// Helper function to get a task by ID (supports both full UUIDs and short IDs)
+fn get_task_by_id_or_short_id(conn: &Connection, task_id: &str) -> Result<storage::Task> {
+    // Check if this looks like a full UUID (contains hyphens and is 36 chars)
+    if task_id.len() == 36 && task_id.contains('-') {
+        // Try full UUID first
+        match storage::get_task(conn, task_id) {
+            Ok(task) => return Ok(task),
+            Err(error::GhostError::TaskNotFound { .. }) => {
+                // Fall back to short ID search
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    
+    // Try short ID search
+    storage::get_task_by_short_id(conn, task_id)
+}
+
 /// Run a command in the background
 pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
     if command.is_empty() {
@@ -69,7 +87,7 @@ pub fn list(status_filter: Option<String>) -> Result<()> {
 /// Show logs for a process
 pub async fn log(task_id: &str, follow: bool) -> Result<()> {
     let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
+    let task = get_task_by_id_or_short_id(&conn, task_id)?;
 
     let log_path = PathBuf::from(&task.log_path);
     let content =
@@ -90,7 +108,7 @@ pub async fn log(task_id: &str, follow: bool) -> Result<()> {
 /// Stop a background process
 pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
+    let task = get_task_by_id_or_short_id(&conn, task_id)?;
 
     helpers::validate_task_running(&task)?;
 
@@ -107,7 +125,7 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     } else {
         storage::TaskStatus::Exited
     };
-    storage::update_task_status(&conn, task_id, status, None)?;
+    storage::update_task_status(&conn, &task.id, status, None)?;
 
     if show_output {
         let pid = task.pid;
@@ -121,8 +139,10 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
 pub fn status(task_id: &str) -> Result<()> {
     let conn = storage::init_database()?;
 
-    // This will update the status if the process is no longer running
-    let task = storage::update_task_status_by_process_check(&conn, task_id)?;
+    // First get the task to resolve short ID to full ID
+    let task = get_task_by_id_or_short_id(&conn, task_id)?;
+    // Then update the status if the process is no longer running
+    let task = storage::update_task_status_by_process_check(&conn, &task.id)?;
     display::print_task_details(&task);
 
     Ok(())

@@ -8,7 +8,7 @@ use tui_scrollview::ScrollViewState;
 
 use super::log_viewer_scrollview::LogViewerScrollWidget;
 use super::table_state_scroll::TableScroll;
-use super::{TaskFilter, ViewMode};
+use super::{SearchType, TaskFilter, ViewMode};
 use crate::app::config::Config;
 use crate::app::error::Result;
 use crate::app::storage;
@@ -42,6 +42,12 @@ pub struct TuiApp {
     pub last_render_area: Rect,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
+    pub search_query: String,
+    pub previous_view_mode: ViewMode,  // 検索モードから戻るため
+    pub filtered_tasks: Vec<Task>,     // フィルタリング済みタスク
+    pub is_search_filtered: bool,      // 検索フィルタリング中かどうか
+    pub current_log_task: Option<Task>, // ログビュー中の選択されたタスク
+    pub search_type: Option<SearchType>, // 検索のタイプ
 }
 
 impl TuiApp {
@@ -62,6 +68,12 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            search_query: String::new(),
+            previous_view_mode: ViewMode::TaskList,
+            filtered_tasks: Vec::new(),
+            is_search_filtered: false,
+            current_log_task: None,
+            search_type: None,
         })
     }
 
@@ -83,6 +95,12 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            search_query: String::new(),
+            previous_view_mode: ViewMode::TaskList,
+            filtered_tasks: Vec::new(),
+            is_search_filtered: false,
+            current_log_task: None,
+            search_type: None,
         })
     }
 
@@ -98,8 +116,14 @@ impl TuiApp {
 
         self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter)?;
 
+        // Update search filter if active
+        if self.is_search_filtered || !self.search_query.is_empty() || self.search_type.is_some() {
+            self.update_search_filter();
+        }
+
         // Update table scroll with new item count
-        self.table_scroll.set_total_items(self.tasks.len());
+        let display_tasks = self.get_display_tasks();
+        self.table_scroll.set_total_items(display_tasks.len());
 
         Ok(())
     }
@@ -110,13 +134,26 @@ impl TuiApp {
             ViewMode::TaskList => self.handle_task_list_key(key),
             ViewMode::LogView => self.handle_log_view_key(key),
             ViewMode::ProcessDetails => self.handle_process_details_key(key),
+            ViewMode::SearchProcessName | ViewMode::SearchLogContent | ViewMode::SearchInLog => {
+                self.handle_search_key(key)
+            }
         }
     }
 
     fn handle_task_list_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Char('q') => {
-                self.should_quit = true;
+                if self.is_search_filtered {
+                    // Clear search filter
+                    self.search_query.clear();
+                    self.is_search_filtered = false;
+                    self.filtered_tasks.clear();
+                    self.search_type = None;
+                    self.table_scroll = TableScroll::new();
+                    self.table_scroll.set_total_items(self.tasks.len());
+                } else {
+                    self.should_quit = true;
+                }
             }
             KeyCode::Char('j') => {
                 self.table_scroll.next();
@@ -130,8 +167,9 @@ impl TuiApp {
             KeyCode::Char('G') => {
                 self.table_scroll.last();
             }
-            KeyCode::Char('l') => {
-                if !self.tasks.is_empty() {
+            KeyCode::Enter => {
+                let display_tasks = self.get_display_tasks();
+                if !display_tasks.is_empty() {
                     self.view_mode = ViewMode::LogView;
                     self.initialize_log_view();
                 }
@@ -153,21 +191,36 @@ impl TuiApp {
                 self.cycle_filter();
                 self.refresh_tasks()?;
             }
-            KeyCode::Enter => {
-                if !self.tasks.is_empty() {
-                    let selected_task = &self.tasks[self.selected_index()];
-                    self.selected_task_id = Some(selected_task.id.clone());
-                    self.view_mode = ViewMode::ProcessDetails;
-                    self.env_scroll_state = ScrollViewState::default();
-                }
-            }
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 let page_size = self.calculate_table_page_size();
                 self.table_scroll.page_down(page_size);
             }
+            KeyCode::Char('d') => {
+                if !self.tasks.is_empty() {
+                    let display_tasks = self.get_display_tasks();
+                    if !display_tasks.is_empty() {
+                        let selected_task = &display_tasks[self.selected_index()];
+                        self.selected_task_id = Some(selected_task.id.clone());
+                        self.view_mode = ViewMode::ProcessDetails;
+                        self.env_scroll_state = ScrollViewState::default();
+                    }
+                }
+            }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 let page_size = self.calculate_table_page_size();
                 self.table_scroll.page_up(page_size);
+            }
+            KeyCode::Char('/') => {
+                self.search_query.clear();
+                self.previous_view_mode = self.view_mode.clone();
+                self.view_mode = ViewMode::SearchProcessName;
+                self.search_type = Some(SearchType::ProcessName);
+            }
+            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) && !self.tasks.is_empty() => {
+                self.search_query.clear();
+                self.previous_view_mode = self.view_mode.clone();
+                self.view_mode = ViewMode::SearchLogContent;
+                self.search_type = Some(SearchType::LogContent);
             }
             _ => {}
         }
@@ -177,12 +230,16 @@ impl TuiApp {
 
     fn handle_log_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            KeyCode::Esc => {
-                self.view_mode = ViewMode::TaskList;
+            KeyCode::Esc | KeyCode::Char('q') => {
+                // Return to appropriate view mode (task list or keep search filtered state)
+                if self.is_search_filtered {
+                    self.view_mode = ViewMode::TaskList;
+                } else {
+                    self.view_mode = ViewMode::TaskList;
+                }
                 self.log_scroll_state.scroll_to_top();
-            }
-            KeyCode::Char('q') => {
-                self.should_quit = true;
+                // Clear the current log task
+                self.current_log_task = None;
             }
             KeyCode::Char('j') => {
                 self.log_scroll_state.scroll_down();
@@ -196,6 +253,18 @@ impl TuiApp {
             KeyCode::Char('l') => {
                 self.log_scroll_state.scroll_right();
             }
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Scroll down multiple lines (half page)
+                for _ in 0..10 {
+                    self.log_scroll_state.scroll_down();
+                }
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Scroll up multiple lines (half page)
+                for _ in 0..10 {
+                    self.log_scroll_state.scroll_up();
+                }
+            }
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
                 self.log_scroll_state.scroll_to_top();
             }
@@ -205,11 +274,10 @@ impl TuiApp {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
-            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.log_scroll_state.scroll_page_down();
-            }
-            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.log_scroll_state.scroll_page_up();
+            KeyCode::Char('/') => {
+                self.search_query.clear();
+                self.previous_view_mode = self.view_mode.clone();
+                self.view_mode = ViewMode::SearchInLog;
             }
             _ => {}
         }
@@ -247,10 +315,91 @@ impl TuiApp {
         Ok(())
     }
 
+    fn handle_search_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => {
+                // Cancel search and return to previous view
+                self.search_query.clear();
+                self.is_search_filtered = false;
+                self.filtered_tasks.clear();
+                self.search_type = None;
+                self.view_mode = self.previous_view_mode.clone();
+                self.table_scroll = TableScroll::new();
+                self.table_scroll.set_total_items(self.tasks.len());
+            }
+            KeyCode::Enter => {
+                // Open log view for selected task
+                let display_tasks = self.get_display_tasks();
+                if !display_tasks.is_empty() {
+                    self.view_mode = ViewMode::LogView;
+                    self.initialize_log_view();
+                }
+            }
+            KeyCode::Tab => {
+                // Confirm search filtering and return to task list
+                if !self.search_query.is_empty() {
+                    self.is_search_filtered = true;
+                }
+                self.view_mode = ViewMode::TaskList;
+                // Keep current selection position, just update total items
+                self.table_scroll.set_total_items(self.get_display_tasks().len());
+            }
+            // Navigation in search mode with Ctrl-n/p and Ctrl-j/k
+            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.table_scroll.next();
+            }
+            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.table_scroll.previous();
+            }
+            KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.table_scroll.next();
+            }
+            KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.table_scroll.previous();
+            }
+            // Log view access during search (alternative to Enter)
+            KeyCode::Char('l') => {
+                let display_tasks = self.get_display_tasks();
+                if !display_tasks.is_empty() {
+                    self.view_mode = ViewMode::LogView;
+                    self.initialize_log_view();
+                }
+            }
+            KeyCode::Backspace => {
+                self.search_query.pop();
+                // Update filtering immediately
+                self.update_search_filter();
+                // Reset selection to first item when filter changes
+                self.table_scroll.set_total_items(self.filtered_tasks.len());
+                if !self.filtered_tasks.is_empty() {
+                    self.table_scroll.select(Some(0));
+                }
+            }
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.search_query.push(c);
+                // Update filtering immediately
+                self.update_search_filter();
+                // Reset selection to first item when filter changes
+                self.table_scroll.set_total_items(self.filtered_tasks.len());
+                if !self.filtered_tasks.is_empty() {
+                    self.table_scroll.select(Some(0));
+                }
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
     fn initialize_log_view(&mut self) {
         if let Some(selected) = self.table_scroll.selected() {
-            if selected < self.tasks.len() {
-                let selected_task = &self.tasks[selected];
+            let display_tasks = self.get_display_tasks();
+            if selected < display_tasks.len() {
+                let selected_task = &display_tasks[selected];
+                
+                // Save the selected task for log view
+                self.current_log_task = Some(selected_task.clone());
+                
                 let log_path = &selected_task.log_path;
 
                 // Check cache first
@@ -275,6 +424,9 @@ impl TuiApp {
             ViewMode::TaskList => self.render_task_list(frame, area),
             ViewMode::LogView => self.render_log_view(frame, area),
             ViewMode::ProcessDetails => self.render_process_details(frame, area),
+            ViewMode::SearchProcessName | ViewMode::SearchLogContent | ViewMode::SearchInLog => {
+                self.render_search_mode(frame, area)
+            }
         }
     }
 
@@ -282,88 +434,155 @@ impl TuiApp {
     fn render_task_list(&mut self, frame: &mut Frame, area: Rect) {
         use super::task_list::TaskListWidget;
 
-        let widget = TaskListWidget::new(&self.tasks, &self.filter, &mut self.table_scroll);
+        let display_tasks = self.get_display_tasks();
+        let widget = if self.is_search_filtered && !self.search_query.is_empty() {
+            TaskListWidget::with_search(display_tasks, &self.filter, &mut self.table_scroll, self.search_query.clone())
+        } else {
+            TaskListWidget::new(display_tasks, &self.filter, &mut self.table_scroll)
+        };
         frame.render_widget(widget, area);
+    }
+
+    /// Render search mode UI
+    fn render_search_mode(&mut self, frame: &mut Frame, area: Rect) {
+        use ratatui::{
+            layout::{Constraint, Direction, Layout},
+            style::{Color, Modifier, Style},
+            widgets::{Block, Borders, Paragraph},
+        };
+
+        // Split area: search bar at bottom, content above
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(4)].as_ref())
+            .split(area);
+
+        // Render task list with search results
+        use super::task_list::TaskListWidget;
+        
+        let display_tasks = self.get_display_tasks();
+        let widget = TaskListWidget::with_search(
+            display_tasks,
+            &self.filter,
+            &mut self.table_scroll,
+            self.search_query.clone(),
+        );
+        frame.render_widget(widget, chunks[0]);
+
+        // Render search input at bottom with help text
+        let (search_title, help_text) = match self.view_mode {
+            ViewMode::SearchProcessName => ("Search Process Name", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
+            ViewMode::SearchLogContent => ("Search in Logs (grep)", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
+            ViewMode::SearchInLog => ("Search in Current Log", " Enter:Log  Tab:Execute  Esc:Cancel  C-n/p/j/k:Move"),
+            _ => ("Search", " Enter:Log  Tab:Execute  Esc:Cancel"),
+        };
+
+        // Split search area: input box + help line
+        let search_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Length(1)].as_ref())
+            .split(chunks[1]);
+
+        let search_block = Block::default()
+            .borders(Borders::ALL)
+            .title(search_title)
+            .style(Style::default().fg(Color::Yellow));
+
+        let search_text = Paragraph::new(self.search_query.as_str())
+            .block(search_block)
+            .style(Style::default().add_modifier(Modifier::BOLD));
+
+        frame.render_widget(search_text, search_chunks[0]);
+
+        // Render help text with current match count
+        let match_count = if matches!(self.view_mode, ViewMode::SearchProcessName | ViewMode::SearchLogContent) {
+            format!(" {} matches  {}", self.filtered_tasks.len(), help_text)
+        } else {
+            help_text.to_string()
+        };
+        let help_paragraph = Paragraph::new(match_count)
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(help_paragraph, search_chunks[1]);
+
+        // Set cursor position (inside border, after text)
+        frame.set_cursor_position((search_chunks[0].x + 1 + self.search_query.len() as u16, search_chunks[0].y + 1));
     }
 
     /// Render log view widget
     fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
-        if let Some(selected) = self.table_scroll.selected() {
-            if selected < self.tasks.len() {
-                let selected_task = &self.tasks[selected];
-                let log_path = &selected_task.log_path;
+        if let Some(ref selected_task) = self.current_log_task {
+            let log_path = &selected_task.log_path;
 
-                // Check if we need to reload or incrementally update the file
-                let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
-                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    let file_size = metadata.len();
+            // Check if we need to reload or incrementally update the file
+            let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                let file_size = metadata.len();
 
-                    if let Some(cache) = self.log_cache.get(log_path) {
-                        if modified > cache.last_modified {
-                            if file_size > cache.file_size {
-                                // File grew, use incremental update
-                                UpdateStrategy::Incremental(cache.file_size)
-                            } else {
-                                // File changed in other ways, full reload
-                                UpdateStrategy::FullReload
-                            }
+                if let Some(cache) = self.log_cache.get(log_path) {
+                    if modified > cache.last_modified {
+                        if file_size > cache.file_size {
+                            // File grew, use incremental update
+                            UpdateStrategy::Incremental(cache.file_size)
                         } else {
-                            // No changes
-                            UpdateStrategy::UseCache
+                            // File changed in other ways, full reload
+                            UpdateStrategy::FullReload
                         }
                     } else {
-                        // No cache exists, need to load
-                        UpdateStrategy::FullReload
+                        // No changes
+                        UpdateStrategy::UseCache
                     }
                 } else {
-                    // File doesn't exist or can't read metadata
-                    UpdateStrategy::UseCache
-                };
-
-                // Use scrollview widget
-                let scrollview_widget = match update_strategy {
-                    UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
-                    UpdateStrategy::Incremental(previous_size) => {
-                        let cache = self.log_cache.get(log_path).unwrap();
-                        LogViewerScrollWidget::load_incremental_content(
-                            selected_task,
-                            cache.content.clone(),
-                            previous_size,
-                        )
-                    }
-                    UpdateStrategy::UseCache => {
-                        let cache = self.log_cache.get(log_path).unwrap();
-                        LogViewerScrollWidget::with_cached_content(
-                            selected_task,
-                            cache.content.clone(),
-                        )
-                    }
-                };
-
-                // Update cache if needed
-                if matches!(
-                    update_strategy,
-                    UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
-                ) {
-                    if let Ok(metadata) = fs::metadata(log_path) {
-                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                        self.log_cache.insert(
-                            log_path.clone(),
-                            LogCache {
-                                content: scrollview_widget.get_lines().to_vec(),
-                                last_modified: modified,
-                                file_size: metadata.len(),
-                            },
-                        );
-                    }
+                    // No cache exists, need to load
+                    UpdateStrategy::FullReload
                 }
+            } else {
+                // File doesn't exist or can't read metadata
+                UpdateStrategy::UseCache
+            };
 
-                // Update line count
-                self.log_lines_count = scrollview_widget.get_lines_count();
+            // Use scrollview widget
+            let scrollview_widget = match update_strategy {
+                UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
+                UpdateStrategy::Incremental(previous_size) => {
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    LogViewerScrollWidget::load_incremental_content(
+                        selected_task,
+                        cache.content.clone(),
+                        previous_size,
+                    )
+                }
+                UpdateStrategy::UseCache => {
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    LogViewerScrollWidget::with_cached_content(
+                        selected_task,
+                        cache.content.clone(),
+                    )
+                }
+            };
 
-                // Render with scrollview state
-                frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
+            // Update cache if needed
+            if matches!(
+                update_strategy,
+                UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+            ) {
+                if let Ok(metadata) = fs::metadata(log_path) {
+                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                    self.log_cache.insert(
+                        log_path.clone(),
+                        LogCache {
+                            content: scrollview_widget.get_lines().to_vec(),
+                            last_modified: modified,
+                            file_size: metadata.len(),
+                        },
+                    );
+                }
             }
+
+            // Update line count
+            self.log_lines_count = scrollview_widget.get_lines_count();
+
+            // Render with scrollview state
+            frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
         }
     }
 
@@ -373,8 +592,9 @@ impl TuiApp {
 
     /// Stop the selected task
     fn stop_task(&mut self, force: bool) {
-        if self.selected_index() < self.tasks.len() {
-            let task = &self.tasks[self.selected_index()];
+        let display_tasks = self.get_display_tasks();
+        if self.selected_index() < display_tasks.len() {
+            let task = &display_tasks[self.selected_index()];
             let task_id = &task.id;
 
             // Send signal to stop the task (commands::stop handles process group killing)
@@ -404,7 +624,9 @@ impl TuiApp {
 
         // Find the selected task
         if let Some(task_id) = &self.selected_task_id {
-            if let Some(task) = self.tasks.iter().find(|t| t.id == *task_id) {
+            // Search in display tasks (could be filtered)
+            let display_tasks = self.get_display_tasks();
+            if let Some(task) = display_tasks.iter().find(|t| t.id == *task_id) {
                 let widget = ProcessDetailsWidget::new(task);
                 widget.render(frame, area, &mut self.env_scroll_state);
             } else {
@@ -418,6 +640,55 @@ impl TuiApp {
         }
     }
 
+    /// Update search filtering based on current query
+    fn update_search_filter(&mut self) {
+        if self.search_query.is_empty() {
+            self.filtered_tasks.clear();
+            return;
+        }
+
+        let query = self.search_query.to_lowercase();
+        self.filtered_tasks = self.tasks
+            .iter()
+            .filter(|task| {
+                match self.search_type {
+                    Some(SearchType::ProcessName) => {
+                        // Parse command JSON and search in the readable command
+                        let command = self.parse_command(&task.command);
+                        command.to_lowercase().contains(&query)
+                    }
+                    Some(SearchType::LogContent) => {
+                        // TODO: Search in log file content
+                        // For now, search in command
+                        let command = self.parse_command(&task.command);
+                        command.to_lowercase().contains(&query)
+                    }
+                    None => false,
+                }
+            })
+            .cloned()
+            .collect();
+    }
+
+    /// Get display tasks (filtered or original)
+    fn get_display_tasks(&self) -> Vec<Task> {
+        // If we have a search query (either in search mode or confirmed search), use filtered tasks
+        if !self.search_query.is_empty() {
+            self.filtered_tasks.clone()
+        } else if self.is_search_filtered {
+            self.filtered_tasks.clone()
+        } else {
+            self.tasks.clone()
+        }
+    }
+
+    /// Parse command from JSON format to readable string
+    fn parse_command(&self, command_json: &str) -> String {
+        match serde_json::from_str::<Vec<String>>(command_json) {
+            Ok(cmd_vec) => cmd_vec.join(" "),
+            Err(_) => command_json.to_string(),
+        }
+    }
     // Accessor methods for tests compatibility
     pub fn selected_index(&self) -> usize {
         self.table_scroll.selected().unwrap_or(0)

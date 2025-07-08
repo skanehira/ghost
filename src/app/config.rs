@@ -50,19 +50,69 @@ impl Config {
 
 /// Get the default data directory for Ghost
 pub fn get_data_dir() -> PathBuf {
-    // Check if GHOST_DATA_DIR environment variable is set
+    // Priority 1: GHOST_DATA_DIR environment variable
     if let Ok(data_dir) = std::env::var("GHOST_DATA_DIR") {
-        PathBuf::from(data_dir)
-    } else {
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("ghost")
+        return PathBuf::from(data_dir);
     }
+    
+    // Priority 2: GHOST_HOME environment variable
+    if let Ok(ghost_home) = std::env::var("GHOST_HOME") {
+        return PathBuf::from(ghost_home);
+    }
+    
+    // Priority 3: XDG_DATA_HOME (Linux/Unix)
+    #[cfg(target_os = "linux")]
+    if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+        return PathBuf::from(xdg_data).join("ghost");
+    }
+    
+    // Priority 4: OS-specific default locations
+    #[cfg(target_os = "linux")]
+    if let Some(home) = dirs::home_dir() {
+        return home.join(".local").join("share").join("ghost");
+    }
+    
+    // macOS and Windows: Use platform-specific dirs
+    dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("ghost")
 }
 
 /// Get the default log directory
 pub fn get_log_dir() -> PathBuf {
+    // Option to use cache directory for logs
+    if let Ok(use_cache) = std::env::var("GHOST_LOGS_IN_CACHE") {
+        if use_cache == "true" || use_cache == "1" {
+            return get_cache_dir().join("logs");
+        }
+    }
+    
     get_data_dir().join("logs")
+}
+
+/// Get the cache directory for temporary files
+pub fn get_cache_dir() -> PathBuf {
+    // Priority 1: GHOST_CACHE_DIR environment variable
+    if let Ok(cache_dir) = std::env::var("GHOST_CACHE_DIR") {
+        return PathBuf::from(cache_dir);
+    }
+    
+    // Priority 2: XDG_CACHE_HOME (Linux/Unix)
+    #[cfg(target_os = "linux")]
+    if let Ok(xdg_cache) = std::env::var("XDG_CACHE_HOME") {
+        return PathBuf::from(xdg_cache).join("ghost");
+    }
+    
+    // Priority 3: OS-specific cache locations
+    #[cfg(target_os = "linux")]
+    if let Some(home) = dirs::home_dir() {
+        return home.join(".cache").join("ghost");
+    }
+    
+    // macOS and Windows: Use cache dir
+    dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("ghost")
 }
 
 /// Get the default database path

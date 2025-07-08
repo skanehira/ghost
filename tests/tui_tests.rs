@@ -295,9 +295,9 @@ fn test_footer_contains_keybinds() {
 
     // Check that footer contains essential keybinds
     assert!(buffer_output.contains("j/k:Move"));
-    assert!(buffer_output.contains("l:Log"));
+    assert!(buffer_output.contains("l/Enter:Log"));
     assert!(buffer_output.contains("s/C-k:Stop"));
-    assert!(buffer_output.contains("q:Quit"));
+    assert!(buffer_output.contains("q:Qu"));
     assert!(buffer_output.contains("g/G:Top/Bot"));
 }
 
@@ -334,7 +334,7 @@ fn test_task_list_vertical_layout() {
     // Footer block should be separate
     assert!(lines[lines.len() - 3].starts_with("├")); // Footer top border
     assert!(lines[lines.len() - 2].contains("j/k:Move"));
-    assert!(lines[lines.len() - 2].contains("l:Log"));
+    assert!(lines[lines.len() - 2].contains("l/Enter:Log"));
     assert!(lines[lines.len() - 1].starts_with("└")); // Footer bottom border
 }
 

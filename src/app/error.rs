@@ -38,6 +38,9 @@ pub enum GhostError {
     #[error("Task not found: {task_id}")]
     TaskNotFound { task_id: String },
 
+    #[error("Ambiguous task ID '{short_id}': multiple tasks match this prefix")]
+    AmbiguousTaskId { short_id: String },
+
     #[error("Task operation failed: {task_id} - {message}")]
     TaskOperation { task_id: String, message: String },
 

@@ -26,7 +26,16 @@ pub enum TaskFilter {
 pub enum ViewMode {
     TaskList,
     LogView,
-    ProcessDetails,
+    ProcessDetails,     // dキーでプロセス詳細表示
+    SearchProcessName,  // /キーでプロセス名検索
+    SearchLogContent,   // gキーでログ内容検索
+    SearchInLog,        // ログビューで/キーでログ内検索
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SearchType {
+    ProcessName,  // プロセス名での検索
+    LogContent,   // ログ内容での検索
 }
 
 impl Default for App {
