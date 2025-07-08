@@ -1,5 +1,6 @@
 pub mod app;
 pub mod log_viewer_scrollview;
+pub mod process_details;
 pub mod table_state_scroll;
 pub mod task_list;
 
@@ -25,6 +26,7 @@ pub enum TaskFilter {
 pub enum ViewMode {
     TaskList,
     LogView,
+    ProcessDetails,
 }
 
 impl Default for App {

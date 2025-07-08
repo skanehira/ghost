@@ -37,6 +37,8 @@ pub struct TuiApp {
     pub log_scroll_offset: usize,
     pub log_lines_count: usize,
     pub log_scroll_state: ScrollViewState,
+    pub selected_task_id: Option<String>,
+    pub env_scroll_state: ScrollViewState,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
 }
@@ -54,6 +56,8 @@ impl TuiApp {
             log_scroll_offset: 0,
             log_lines_count: 0,
             log_scroll_state: ScrollViewState::default(),
+            selected_task_id: None,
+            env_scroll_state: ScrollViewState::default(),
             conn,
             log_cache: HashMap::new(),
         })
@@ -72,6 +76,8 @@ impl TuiApp {
             log_scroll_offset: 0,
             log_lines_count: 0,
             log_scroll_state: ScrollViewState::default(),
+            selected_task_id: None,
+            env_scroll_state: ScrollViewState::default(),
             conn,
             log_cache: HashMap::new(),
         })
@@ -100,6 +106,7 @@ impl TuiApp {
         match self.view_mode {
             ViewMode::TaskList => self.handle_task_list_key(key),
             ViewMode::LogView => self.handle_log_view_key(key),
+            ViewMode::ProcessDetails => self.handle_process_details_key(key),
         }
     }
 
@@ -143,7 +150,14 @@ impl TuiApp {
                 self.cycle_filter();
                 self.refresh_tasks()?;
             }
-
+            KeyCode::Enter => {
+                if !self.tasks.is_empty() {
+                    let selected_task = &self.tasks[self.selected_index()];
+                    self.selected_task_id = Some(selected_task.id.clone());
+                    self.view_mode = ViewMode::ProcessDetails;
+                    self.env_scroll_state = ScrollViewState::default();
+                }
+            }
             _ => {}
         }
 
@@ -186,6 +200,27 @@ impl TuiApp {
         Ok(())
     }
 
+    fn handle_process_details_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.view_mode = ViewMode::TaskList;
+                self.env_scroll_state = ScrollViewState::default();
+            }
+            KeyCode::Char('j') => {
+                self.env_scroll_state.scroll_down();
+            }
+            KeyCode::Char('k') => {
+                self.env_scroll_state.scroll_up();
+            }
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.should_quit = true;
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
     fn initialize_log_view(&mut self) {
         if let Some(selected) = self.table_scroll.selected() {
             if selected < self.tasks.len() {
@@ -212,6 +247,7 @@ impl TuiApp {
         match self.view_mode {
             ViewMode::TaskList => self.render_task_list(frame, area),
             ViewMode::LogView => self.render_log_view(frame, area),
+            ViewMode::ProcessDetails => self.render_process_details(frame, area),
         }
     }
 
@@ -333,6 +369,26 @@ impl TuiApp {
         };
         // Reset selection when changing filter
         self.table_scroll = TableScroll::new();
+    }
+
+    /// Render process details view
+    fn render_process_details(&mut self, frame: &mut Frame, area: Rect) {
+        use super::process_details::ProcessDetailsWidget;
+
+        // Find the selected task
+        if let Some(task_id) = &self.selected_task_id {
+            if let Some(task) = self.tasks.iter().find(|t| t.id == *task_id) {
+                let widget = ProcessDetailsWidget::new(task);
+                widget.render(frame, area, &mut self.env_scroll_state);
+            } else {
+                // Task not found, go back to task list
+                self.view_mode = ViewMode::TaskList;
+                self.selected_task_id = None;
+            }
+        } else {
+            // No task selected, go back to task list
+            self.view_mode = ViewMode::TaskList;
+        }
     }
 
     // Accessor methods for tests compatibility

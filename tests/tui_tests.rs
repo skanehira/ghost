@@ -1,7 +1,7 @@
 use ghost::app::config::Config;
 use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
-use ghost::app::tui::{App, TaskFilter};
+use ghost::app::tui::{App, TaskFilter, ViewMode};
 use pretty_assertions::assert_eq;
 use ratatui::{Terminal, backend::TestBackend};
 use std::fs;
@@ -540,4 +540,112 @@ fn test_task_filter_cycling_with_tab() {
     // Press Tab to cycle back to All
     app.handle_key(key_tab).unwrap();
     assert_eq!(app.filter, TaskFilter::All);
+}
+
+#[test]
+fn test_process_details_navigation() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task with environment variables
+    let tasks = vec![Task {
+        id: "12345678-1234-1234-1234-123456789012".to_string(),
+        pid: 1234,
+        pgid: Some(1234),
+        command: r#"["npm", "run", "dev"]"#.to_string(),
+        env: Some(r#"[["NODE_ENV","development"],["PORT","3000"]]"#.to_string()),
+        cwd: Some("/home/user/project".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1000000000,
+        finished_at: None,
+        log_path: "/tmp/ghost/logs/12345678.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+
+    // Initial view should be TaskList
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+
+    // Press Enter to view process details
+    let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+    app.handle_key(key_enter).unwrap();
+    assert_eq!(app.view_mode, ViewMode::ProcessDetails);
+    assert_eq!(
+        app.selected_task_id,
+        Some("12345678-1234-1234-1234-123456789012".to_string())
+    );
+
+    // Press Esc to go back to task list
+    let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+    app.handle_key(key_esc).unwrap();
+    assert_eq!(app.view_mode, ViewMode::TaskList);
+}
+
+#[test]
+fn test_process_details_display() {
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task
+    let tasks = vec![Task {
+        id: "test-task-id".to_string(),
+        pid: 5678,
+        pgid: Some(5678),
+        command: r#"["echo", "hello world"]"#.to_string(),
+        env: Some(r#"[["TEST_VAR","test_value"]]"#.to_string()),
+        cwd: Some("/tmp/test".to_string()),
+        status: TaskStatus::Exited,
+        exit_code: Some(0),
+        started_at: 1000000000,
+        finished_at: Some(1000001000),
+        log_path: "/tmp/ghost/logs/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::ProcessDetails;
+    app.selected_task_id = Some("test-task-id".to_string());
+
+    // Create a terminal and render the process details view
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| app.render(f)).unwrap();
+
+    // Get the buffer content
+    let buffer = terminal.backend().buffer();
+    let area = buffer.area();
+    let content: Vec<String> = (0..area.height)
+        .map(|y| {
+            (0..area.width)
+                .map(|x| buffer.cell((x, y)).unwrap().symbol().to_string())
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        })
+        .collect();
+
+    // Verify key elements are displayed
+    let full_content = content.join("\n");
+
+    // Debug output
+    if !full_content.contains("Process Details") {
+        eprintln!("Full content:\n{}", full_content);
+    }
+
+    assert!(full_content.contains("Process Details"));
+    assert!(full_content.contains("Task ID: test-task-id"));
+    assert!(full_content.contains("Command: echo hello world"));
+    assert!(full_content.contains("Status: exited") || full_content.contains("Status: Exited"));
+    assert!(full_content.contains("PID: 5678"));
+    assert!(full_content.contains("PGID: 5678"));
+    assert!(full_content.contains("Directory: /tmp/test"));
+    assert!(full_content.contains("Environment Variables"));
+    assert!(full_content.contains("TEST_VAR=test_value"));
+    assert!(full_content.contains("[Esc] Back to list"));
+    assert!(full_content.contains("[j/k] Scroll env vars"));
 }

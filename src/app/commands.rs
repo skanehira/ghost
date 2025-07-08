@@ -30,20 +30,26 @@ fn spawn_and_register_process(
         None => std::env::current_dir().ok(),
     };
 
-    let (process_info, child) =
-        process::spawn_background_process(command.clone(), effective_cwd.clone(), None)?;
+    let (process_info, child) = process::spawn_background_process_with_env(
+        command.clone(),
+        effective_cwd.clone(),
+        None,
+        env_vars,
+    )?;
 
+    // Save to database with the actual environment variables from the process
+    let env = if process_info.env.is_empty() {
+        None
+    } else {
+        Some(process_info.env.as_slice())
+    };
     storage::insert_task(
         conn,
         &process_info.id,
         process_info.pid,
         Some(process_info.pgid),
         &command,
-        if env_vars.is_empty() {
-            None
-        } else {
-            Some(&env_vars)
-        },
+        env,
         effective_cwd.as_deref(),
         &process_info.log_path,
     )?;

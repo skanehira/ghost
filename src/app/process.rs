@@ -14,6 +14,7 @@ pub struct ProcessInfo {
     pub pgid: i32,
     pub command: Vec<String>,
     pub log_path: PathBuf,
+    pub env: Vec<(String, String)>,
 }
 
 use crate::app::error::{GhostError, Result};
@@ -24,6 +25,17 @@ pub fn spawn_background_process(
     command: Vec<String>,
     cwd: Option<PathBuf>,
     log_dir: Option<PathBuf>,
+) -> Result<(ProcessInfo, Child)> {
+    spawn_background_process_with_env(command, cwd, log_dir, Vec::new())
+}
+
+/// Spawn a background process with logging and custom environment variables
+/// Returns both ProcessInfo and Child handle to allow proper cleanup
+pub fn spawn_background_process_with_env(
+    command: Vec<String>,
+    cwd: Option<PathBuf>,
+    log_dir: Option<PathBuf>,
+    custom_env: Vec<(String, String)>,
 ) -> Result<(ProcessInfo, Child)> {
     // Generate task ID and prepare paths
     let task_id = Uuid::new_v4().to_string();
@@ -52,6 +64,20 @@ pub fn spawn_background_process(
         cmd.current_dir(cwd);
     }
 
+    // Collect all environment variables (inherited + custom)
+    let mut all_env: Vec<(String, String)> = std::env::vars().collect();
+
+    // Add custom environment variables
+    for (key, value) in &custom_env {
+        cmd.env(key, value);
+        // Update or add to all_env
+        if let Some(pos) = all_env.iter().position(|(k, _)| k == key) {
+            all_env[pos] = (key.clone(), value.clone());
+        } else {
+            all_env.push((key.clone(), value.clone()));
+        }
+    }
+
     unsafe {
         cmd.pre_exec(|| setsid().map(|_| ()).map_err(std::io::Error::other));
     }
@@ -72,6 +98,7 @@ pub fn spawn_background_process(
         pgid,
         command,
         log_path,
+        env: all_env,
     };
 
     Ok((info, child))
@@ -138,6 +165,7 @@ mod tests {
         assert!(!process_info.id.is_empty());
         assert!(process_info.pid > 0);
         assert_eq!(process_info.command, command);
+        assert!(!process_info.env.is_empty()); // Should have inherited environment
 
         // Check log file exists
         assert!(process_info.log_path.exists());
@@ -246,5 +274,43 @@ mod tests {
         // Wait to reap the zombie
         let _ = child.wait();
         assert!(!exists(pid));
+    }
+
+    #[test]
+    fn test_spawn_with_custom_env() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let log_dir = temp_dir.path().to_path_buf();
+
+        // Spawn command with custom environment variable
+        let command = vec![
+            "sh".to_string(),
+            "-c".to_string(),
+            "echo $TEST_CUSTOM_VAR".to_string(),
+        ];
+        let custom_env = vec![("TEST_CUSTOM_VAR".to_string(), "Hello Ghost!".to_string())];
+
+        let result = spawn_background_process_with_env(
+            command.clone(),
+            None,
+            Some(log_dir),
+            custom_env.clone(),
+        );
+
+        assert!(result.is_ok());
+        let (process_info, mut child) = result.unwrap();
+
+        // Check that custom env var is in the process info
+        let has_custom_var = process_info
+            .env
+            .iter()
+            .any(|(k, v)| k == "TEST_CUSTOM_VAR" && v == "Hello Ghost!");
+        assert!(has_custom_var);
+
+        // Wait for process to complete
+        let _ = child.wait();
+
+        // Check log content to verify env var was used
+        let log_content = std::fs::read_to_string(&process_info.log_path).unwrap();
+        assert!(log_content.contains("Hello Ghost!"));
     }
 }
