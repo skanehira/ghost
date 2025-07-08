@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751948500999,
+  "lastUpdate": 1751949844171,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -929,6 +929,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.04,
             "range": "± 0.19",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "b266e66939148691aa153e437cd976928ec1afc1",
+          "message": "fix: improve aarch64-linux-gnu cross-compilation setup and restore edition 2024",
+          "timestamp": "2025-07-08T13:42:12+09:00",
+          "tree_id": "0f1a7a1004f054031c224a5174483e52ff08dad6",
+          "url": "https://github.com/skanehira/ghost/commit/b266e66939148691aa153e437cd976928ec1afc1"
+        },
+        "date": 1751949843310,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.07",
             "unit": "ns/iter"
           }
         ]
