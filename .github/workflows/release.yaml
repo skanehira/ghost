@@ -41,7 +41,10 @@ jobs:
 
       - name: Install cargo-cross
         run: |
-          cargo install cross --git https://github.com/cross-rs/cross
+          cargo install cross --locked
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

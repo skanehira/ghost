@@ -231,8 +231,8 @@ impl StatefulWidget for LogViewerScrollWidget {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
     use std::io::Write;
     use tempfile::NamedTempFile;
 

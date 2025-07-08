@@ -3,7 +3,7 @@ use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
 use ghost::app::tui::{App, TaskFilter, ViewMode};
 use pretty_assertions::assert_eq;
-use ratatui::{Terminal, backend::TestBackend};
+use ratatui::{backend::TestBackend, Terminal};
 use std::fs;
 use tempfile::TempDir;
 
@@ -385,7 +385,7 @@ fn test_table_scroll_functionality() {
     let key_shift_g = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
     app.handle_key(key_shift_g).unwrap();
     assert_eq!(app.selected_index(), 19); // Last task
-    // Scroll offset should be adjusted to show the selected item
+                                          // Scroll offset should be adjusted to show the selected item
     assert!(app.table_scroll_offset() > 0);
 
     // Test going to top resets scroll

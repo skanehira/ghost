@@ -1,6 +1,6 @@
 use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
 use nix::unistd::setsid;
+use nix::unistd::Pid;
 use std::fs::File;
 use std::os::unix::process::CommandExt as _;
 use std::path::PathBuf;
