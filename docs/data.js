@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751864330907,
+  "lastUpdate": 1751943427976,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -869,6 +869,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18,
             "range": "± 0.11",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "24bc80be1207b82e0b759b806934ed4366687cbf",
+          "message": "feat: add page scrolling with Ctrl+d/u\n\n- Add page down/up functionality to log viewer with Ctrl+d/u\n- Add page down/up functionality to task list with Ctrl+d/u\n- Add page down/up functionality to process details env vars with Ctrl+d/u\n- Implement page_down() and page_up() methods in TableScroll\n- Calculate dynamic page size for task list based on terminal height\n- Update all footers to show C-d/u:Page keybinding\n- Add tests for page navigation functionality\n- Update all expected output files for new footer text",
+          "timestamp": "2025-07-08T11:51:27+09:00",
+          "tree_id": "13238487d7229d3fad74d31c5cef414cc322a4c3",
+          "url": "https://github.com/skanehira/ghost/commit/24bc80be1207b82e0b759b806934ed4366687cbf"
+        },
+        "date": 1751943427384,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.03,
+            "range": "± 0.80",
             "unit": "ns/iter"
           }
         ]
