@@ -298,10 +298,30 @@ impl TuiApp {
                 self.env_scroll_state.scroll_up();
             }
             KeyCode::Char('q') => {
-                self.should_quit = true;
+                self.view_mode = ViewMode::TaskList;
+                self.env_scroll_state = ScrollViewState::default();
             }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
+            }
+            KeyCode::Char('c') => {
+                // Copy command to clipboard (macOS)
+                if let Some(task_id) = &self.selected_task_id {
+                    let display_tasks = self.get_display_tasks();
+                    if let Some(task) = display_tasks.iter().find(|t| t.id == *task_id) {
+                        let command = self.parse_command(&task.command);
+                        let _ = std::process::Command::new("pbcopy")
+                            .stdin(std::process::Stdio::piped())
+                            .spawn()
+                            .and_then(|mut child| {
+                                use std::io::Write;
+                                if let Some(stdin) = child.stdin.as_mut() {
+                                    stdin.write_all(command.as_bytes())?;
+                                }
+                                child.wait()
+                            });
+                    }
+                }
             }
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.env_scroll_state.scroll_page_down();

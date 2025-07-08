@@ -211,10 +211,10 @@ impl<'a> ProcessDetailsWidget<'a> {
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
         // Render keybinds
         let keybinds = vec![
-            Span::styled("[q]", Style::default().fg(Color::Yellow)),
-            Span::raw(" Quit  "),
-            Span::styled("[Esc]", Style::default().fg(Color::Yellow)),
+            Span::styled("[q/Esc]", Style::default().fg(Color::Yellow)),
             Span::raw(" Back to list  "),
+            Span::styled("[c]", Style::default().fg(Color::Yellow)),
+            Span::raw(" Copy command  "),
             Span::styled("[j/k]", Style::default().fg(Color::Yellow)),
             Span::raw(" Scroll  "),
             Span::styled("[C-d/C-u]", Style::default().fg(Color::Yellow)),
