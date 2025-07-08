@@ -6,6 +6,8 @@
 
 # Ghost
 
+> **注意**: このリポジトリは[skanehira/ghost](https://github.com/skanehira/ghost)の個人的改良版です。本家のキーバインド等だけ改良した版です。趣味嗜好の部分が大きいのでghostにPRもしません。私の方で長期メンテもないでしょうが、しばらく愛用します。
+
 Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD).
 
 <div align="center">
