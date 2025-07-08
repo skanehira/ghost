@@ -39,12 +39,9 @@ jobs:
         with:
           cache: true
 
-      - name: Install zig
-        uses: mlugg/setup-zig@v2
-
-      - name: Install cargo-zigbuild
+      - name: Install cargo-cross
         run: |
-          cargo install cargo-zigbuild
+          cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
