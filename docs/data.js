@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751949844171,
+  "lastUpdate": 1752386953130,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -959,6 +959,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.07",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "172e4f65cd38743fc3beacf89200c933c4dc034c",
+          "message": "fix: update tests for v0.1.0 and improve E2E test stability\n\n- Update version numbers in expected test files (v0.0.1 -> v0.1.0)\n- Add wait times in E2E tests to handle async process startup\n- Fix timing issues with process spawning in E2E tests\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-07-13T15:07:24+09:00",
+          "tree_id": "93f9249bcaaf266f7494e2743bf9a0fa7bfae975",
+          "url": "https://github.com/skanehira/ghost/commit/172e4f65cd38743fc3beacf89200c933c4dc034c"
+        },
+        "date": 1752386952226,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.25",
             "unit": "ns/iter"
           }
         ]
