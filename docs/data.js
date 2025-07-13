@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1752386953130,
+  "lastUpdate": 1752388808740,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -989,6 +989,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 0.25",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "ad5a4011232318f7a981dd60d41908acae504682",
+          "message": "[STRUCTURAL] Fix E2E test runner to properly detect and report failures\n\n- Continue running all tests even when some fail (using `|| true`)\n- Properly track and report failed tests in summary\n- Exit with code 1 when there are failures\n- Now correctly shows \"Failed: N\" instead of \"All tests passed\\!\" when tests fail\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-07-13T15:29:24+09:00",
+          "tree_id": "96475f17994618c9181cde248757f8af5b4b3f07",
+          "url": "https://github.com/skanehira/ghost/commit/ad5a4011232318f7a981dd60d41908acae504682"
+        },
+        "date": 1752388808403,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.15",
             "unit": "ns/iter"
           }
         ]
