@@ -1,4 +1,4 @@
-┌ Ghost v0.0.1 [Filter: All] ─────────────────────────────────────────────┐
+┌ Ghost v0.1.0 [Filter: All] ─────────────────────────────────────────────┐
 │ ID      PID     Status  Starte  Command              Directory          │
 │ abc123  12345   runnin  2024-0  npm run dev          -                  │
 │ def678  67890   exited  2024-0  cargo build          -                  │

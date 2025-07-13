@@ -84,7 +84,7 @@ test_list_command() {
     log "Started task 3: $task_id3"
     
     # Wait a moment for tasks to be processed
-    sleep 1
+    sleep 3
     
     # Step 3: Test basic list functionality
     log "Step 3: Testing basic list command..."
