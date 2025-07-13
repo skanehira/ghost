@@ -71,11 +71,11 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
             message: "Process exited immediately after starting".to_string(),
         });
     }
-
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
 
-    // Spawn a background task to wait for the child process to prevent zombies
-    tokio::spawn(async move {
+    // Spawn a blocking task to wait for the child process to prevent zombies without
+    // blocking async runtime executor threads.
+    tokio::task::spawn_blocking(move || {
         let _ = child.wait();
     });
 
