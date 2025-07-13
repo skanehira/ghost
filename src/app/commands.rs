@@ -12,13 +12,8 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
     }
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
-    let (process_info, mut child) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
+    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
-
-    // Spawn a background task to wait for the child process to prevent zombies
-    tokio::spawn(async move {
-        let _ = child.wait();
-    });
 
     Ok(())
 }
