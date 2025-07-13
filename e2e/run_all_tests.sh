@@ -40,12 +40,19 @@ run_test() {
     
     log "Running $test_name..."
     
-    if "$test_script"; then
+    # Make sure script is executable
+    chmod +x "$test_script"
+    
+    # Run the test and capture exit code
+    local exit_code=0
+    "$test_script" || exit_code=$?
+    
+    if [[ $exit_code -eq 0 ]]; then
         success "$test_name passed"
         PASSED_TESTS+=("$test_name")
         return 0
     else
-        failure "$test_name failed"
+        failure "$test_name failed (exit code: $exit_code)"
         FAILED_TESTS+=("$test_name")
         return 1
     fi
@@ -89,26 +96,9 @@ main() {
         log "[$current_test/$total_tests] Testing $(basename "$test_file")"
         echo "----------------------------------------"
         
-        # Run test (use gtimeout on macOS if available, otherwise run without timeout)
-        if command -v gtimeout >/dev/null 2>&1; then
-            if gtimeout 60s run_test "$test_file"; then
-                echo # Add spacing
-            else
-                echo # Add spacing
-            fi
-        elif command -v timeout >/dev/null 2>&1; then
-            if timeout 60s run_test "$test_file"; then
-                echo # Add spacing
-            else
-                echo # Add spacing
-            fi
-        else
-            if run_test "$test_file"; then
-                echo # Add spacing
-            else
-                echo # Add spacing
-            fi
-        fi
+        # Run test directly and continue even if it fails
+        run_test "$test_file" || true
+        echo # Add spacing
     done
     
     # Print summary
@@ -132,6 +122,7 @@ main() {
         done
         
         log "Check individual test logs for details"
+        failure "E2E test suite failed with ${#FAILED_TESTS[@]} failed test(s)"
         exit 1
     else
         success "All tests passed! 🎉"
