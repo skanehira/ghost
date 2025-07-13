@@ -55,6 +55,9 @@ test_run_command() {
     fi
     log "Started task with ID: $TASK_ID"
     
+    # Give the process time to start
+    sleep 2
+    
     # Step 2: Get PID from ghost status
     log "Step 2: Getting PID from ghost status..."
     local ghost_pid
