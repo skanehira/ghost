@@ -3,6 +3,7 @@ use ratatui::{Frame, layout::Rect};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs;
+use std::process::Child;
 use std::time::SystemTime;
 use tui_scrollview::ScrollViewState;
 
@@ -42,6 +43,7 @@ pub struct TuiApp {
     pub last_render_area: Rect,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
+    child_processes: HashMap<String, Child>,
 }
 
 impl TuiApp {
@@ -62,6 +64,7 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            child_processes: HashMap::new(),
         })
     }
 
@@ -83,11 +86,15 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            child_processes: HashMap::new(),
         })
     }
 
     /// Load tasks from database
     pub fn refresh_tasks(&mut self) -> Result<()> {
+        // Clean up finished child processes first
+        self.cleanup_finished_processes();
+
         // Filter status for database query
         let status_filter = match self.filter {
             TaskFilter::All => None,
@@ -168,6 +175,9 @@ impl TuiApp {
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 let page_size = self.calculate_table_page_size();
                 self.table_scroll.page_up(page_size);
+            }
+            KeyCode::Char('r') => {
+                self.rerun_selected_command()?;
             }
             _ => {}
         }
@@ -440,5 +450,62 @@ impl TuiApp {
         // Account for borders (2), header (1), footer separator (1), and footer (1)
         let overhead = 5;
         self.last_render_area.height.saturating_sub(overhead) as usize
+    }
+
+    /// Rerun the selected task's command
+    fn rerun_selected_command(&mut self) -> Result<()> {
+        if !self.tasks.is_empty() {
+            let selected_task = &self.tasks[self.selected_index()];
+
+            // Parse the JSON command string
+            let command: Vec<String> =
+                serde_json::from_str(&selected_task.command).map_err(|e| {
+                    crate::app::error::GhostError::InvalidArgument {
+                        message: format!("Failed to parse command JSON: {e}"),
+                    }
+                })?;
+
+            // Parse environment variables if they exist
+            let env_vars = if let Some(env_json) = &selected_task.env {
+                let env_pairs: Vec<(String, String)> =
+                    serde_json::from_str(env_json).map_err(|e| {
+                        crate::app::error::GhostError::InvalidArgument {
+                            message: format!("Failed to parse environment JSON: {e}"),
+                        }
+                    })?;
+                env_pairs
+            } else {
+                vec![]
+            };
+
+            // Parse working directory
+            let cwd = selected_task.cwd.as_ref().map(std::path::PathBuf::from);
+
+            // Spawn the command
+            let (process_info, child) = crate::app::commands::spawn_and_register_process(
+                command.clone(),
+                cwd,
+                env_vars,
+                &self.conn,
+            )?;
+
+            // Store the child process for proper cleanup
+            self.child_processes.insert(process_info.id.clone(), child);
+
+            // Refresh the task list to show the new process
+            self.refresh_tasks()?;
+        }
+        Ok(())
+    }
+
+    /// Clean up finished child processes to prevent zombie processes
+    fn cleanup_finished_processes(&mut self) {
+        self.child_processes.retain(|_, child| {
+            match child.try_wait() {
+                Ok(Some(_)) => false, // Process finished, remove it
+                Ok(None) => true,     // Process still running, keep it
+                Err(_) => false,
+            }
+        });
     }
 }
