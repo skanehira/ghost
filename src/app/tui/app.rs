@@ -3,6 +3,7 @@ use ratatui::{layout::Rect, Frame};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs;
+use std::process::Child;
 use std::time::SystemTime;
 use tui_scrollview::ScrollViewState;
 
@@ -42,6 +43,7 @@ pub struct TuiApp {
     pub last_render_area: Rect,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
+    child_processes: HashMap<String, Child>,
     // Cache for web server port info keyed by PID to avoid expensive lookups in render
     pub port_cache: HashMap<u32, String>,
     pub search_query: String,
@@ -75,6 +77,7 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            child_processes: HashMap::new(),
             port_cache: HashMap::new(),
             search_query: String::new(),
             previous_view_mode: ViewMode::TaskList,
@@ -107,6 +110,7 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            child_processes: HashMap::new(),
             port_cache: HashMap::new(),
             search_query: String::new(),
             previous_view_mode: ViewMode::TaskList,
@@ -132,6 +136,9 @@ impl TuiApp {
 
     /// Load tasks from database
     pub fn refresh_tasks(&mut self) -> Result<()> {
+        // Clean up finished child processes first
+        self.cleanup_finished_processes();
+
         // Filter status for database query
         let status_filter = match self.filter {
             TaskFilter::All => None,
@@ -298,7 +305,7 @@ impl TuiApp {
                     }
                 }
             }
-            KeyCode::Char('r') => {
+            KeyCode::Char('r') if key.modifiers.is_empty() => {
                 if !self.tasks.is_empty() {
                     let display_tasks = self.get_display_tasks();
                     if !display_tasks.is_empty() {
@@ -306,6 +313,9 @@ impl TuiApp {
                         self.show_restart_confirmation(selected_task);
                     }
                 }
+            }
+            KeyCode::Char('R') => {
+                self.rerun_selected_command()?;
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 let page_size = self.calculate_table_page_size();
@@ -923,7 +933,6 @@ impl TuiApp {
         let overhead = 5;
         self.last_render_area.height.saturating_sub(overhead) as usize
     }
-
     /// Extract web server info and open browser for selected task
     fn open_browser_for_task(&self, task: &Task) {
         if let Some(port_info) = crate::app::helpers::extract_web_server_info(task.pid) {
@@ -1083,6 +1092,61 @@ impl TuiApp {
         Ok(())
     }
 
+    /// Rerun the selected task without confirmation (Shift+R shortcut)
+    fn rerun_selected_command(&mut self) -> Result<()> {
+        let display_tasks = self.get_display_tasks();
+        if display_tasks.is_empty() {
+            return Ok(());
+        }
+
+        let index = self.selected_index();
+        if index >= display_tasks.len() {
+            return Ok(());
+        }
+
+        let selected_task = &display_tasks[index];
+
+        let command: Vec<String> = serde_json::from_str(&selected_task.command).map_err(|e| {
+            crate::app::error::GhostError::InvalidArgument {
+                message: format!("Failed to parse command JSON: {e}"),
+            }
+        })?;
+
+        let env_pairs: Vec<(String, String)> = if let Some(env_json) = &selected_task.env {
+            serde_json::from_str(env_json).map_err(|e| {
+                crate::app::error::GhostError::InvalidArgument {
+                    message: format!("Failed to parse environment JSON: {e}"),
+                }
+            })?
+        } else {
+            Vec::new()
+        };
+
+        let cwd = selected_task.cwd.as_ref().map(std::path::PathBuf::from);
+
+        let (process_info, child) = crate::app::commands::spawn_with_shell_wrapper(
+            command,
+            cwd,
+            env_pairs,
+            &self.conn,
+        )?;
+
+        self.child_processes
+            .insert(process_info.id.clone(), child);
+
+        self.refresh_tasks()?;
+
+        Ok(())
+    }
+
+    /// Clean up finished child processes to prevent zombies when rerunning tasks.
+    fn cleanup_finished_processes(&mut self) {
+        self.child_processes.retain(|_, child| match child.try_wait() {
+            Ok(Some(_)) | Err(_) => false,
+            Ok(None) => true,
+        });
+    }
+
     /// Get task by ID
     fn get_task_by_id(&self, task_id: &str) -> Result<&Task> {
         self.tasks.iter().find(|t| t.id == task_id).ok_or_else(|| {
@@ -1205,4 +1269,3 @@ fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
-}

@@ -47,7 +47,7 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
 
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
-    let (process_info, _) = spawn_and_register_process(
+    let (process_info, mut child) = spawn_and_register_process(
         command,           // Original command for database
         processed_command, // Wrapped command for execution
         cwd,
@@ -73,11 +73,17 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
     }
 
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
+
+    // Spawn a background task to wait for the child process to prevent zombies
+    tokio::spawn(async move {
+        let _ = child.wait();
+    });
+
     Ok(())
 }
 
 /// Spawn process and register it in the database
-fn spawn_and_register_process(
+pub fn spawn_and_register_process(
     original_command: Vec<String>,
     execution_command: Vec<String>,
     cwd: Option<PathBuf>,
@@ -115,6 +121,17 @@ fn spawn_and_register_process(
     )?;
 
     Ok((process_info, child))
+}
+
+/// Convenience helper for spawning using the user's login shell wrapping strategy.
+pub fn spawn_with_shell_wrapper(
+    original_command: Vec<String>,
+    cwd: Option<PathBuf>,
+    env_vars: Vec<(String, String)>,
+    conn: &Connection,
+) -> Result<(process::ProcessInfo, std::process::Child)> {
+    let execution_command = wrap_with_user_shell(original_command.clone());
+    spawn_and_register_process(original_command, execution_command, cwd, env_vars, conn)
 }
 
 /// List all background processes

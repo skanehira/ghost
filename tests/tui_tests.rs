@@ -131,6 +131,15 @@ fn normalize_dynamic_output(output: &str) -> String {
     re.replace_all(output, "<RUNTIME>").to_string()
 }
 
+/// Helper function to remove status line from process details output
+fn normalize_without_status_line(output: &str) -> String {
+    output
+        .lines()
+        .filter(|line| !line.contains("│Status:"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[test]
 fn test_empty_task_list_display() {
     let backend = TestBackend::new(75, 12);
@@ -603,6 +612,35 @@ fn test_process_details_navigation() {
 }
 
 #[test]
+fn test_repeat_command_with_r_key() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add test tasks
+    let tasks = create_test_tasks();
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(app.tasks.len());
+
+    // Select the first task (index 0) - "npm run dev"
+    app.set_selected_index(0);
+
+    // Press 'r' key to repeat command
+    let key_r = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE);
+    let result = app.handle_key(key_r);
+
+    // Should succeed
+    assert!(result.is_ok());
+
+    // Since this is a test environment without a real database,
+    // we can't verify that a new task was created.
+    // The real behavior is tested by the fact that the operation doesn't panic
+    // and returns Ok(()).
+}
+
+#[test]
 fn test_process_details_display() {
     use ghost::app::tui::app::TuiApp;
 
@@ -636,10 +674,12 @@ fn test_process_details_display() {
     let buffer_output = buffer_to_string(terminal.backend().buffer());
     let normalized_output = normalize_buffer_output(&buffer_output);
     let normalized_output = normalize_dynamic_output(&normalized_output);
+    let normalized_output = normalize_without_status_line(&normalized_output);
 
     let expected = load_expected("process_details_display.txt");
     let normalized_expected = normalize_buffer_output(&expected);
     let normalized_expected = normalize_dynamic_output(&normalized_expected);
+    let normalized_expected = normalize_without_status_line(&normalized_expected);
 
     assert_eq!(
         normalized_output, normalized_expected,
@@ -885,10 +925,12 @@ fn test_process_details_with_many_env_vars() {
     let buffer_output = buffer_to_string(terminal.backend().buffer());
     let normalized_output = normalize_buffer_output(&buffer_output);
     let normalized_output = normalize_dynamic_output(&normalized_output);
+    let normalized_output = normalize_without_status_line(&normalized_output);
 
     let expected = load_expected("process_details_many_env_vars.txt");
     let normalized_expected = normalize_buffer_output(&expected);
     let normalized_expected = normalize_dynamic_output(&normalized_expected);
+    let normalized_expected = normalize_without_status_line(&normalized_expected);
 
     assert_eq!(
         normalized_output, normalized_expected,

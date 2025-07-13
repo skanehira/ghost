@@ -8,5 +8,5 @@
 │                                                                         │
 │                                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s/C-k:Stop  /:Search  C-g:G│
+│ j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  o:Open  r:Restart  R:Rerun │
 └─────────────────────────────────────────────────────────────────────────┘
