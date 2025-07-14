@@ -164,8 +164,9 @@ impl TuiApp {
                     self.search_type = None;
                     self.table_scroll = TableScroll::new();
                     self.table_scroll.set_total_items(self.tasks.len());
+                } else {
+                    self.should_quit = true;
                 }
-                // If not in search filtered state, Esc does nothing (don't quit)
             }
             KeyCode::Char('j') => {
                 self.table_scroll.next();
