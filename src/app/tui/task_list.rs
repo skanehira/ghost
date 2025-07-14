@@ -6,12 +6,12 @@ use ratatui::{
 };
 
 // Layout constants
-const ID_COLUMN_WIDTH: u16 = 10; // Short ID (8 chars) + 2 for padding
-const PID_COLUMN_WIDTH: u16 = 8;
-const STATUS_COLUMN_WIDTH: u16 = 9;
-const STARTED_COLUMN_WIDTH: u16 = 18;
-const COMMAND_COLUMN_MIN_WIDTH: u16 = 20;
-const DIRECTORY_COLUMN_MIN_WIDTH: u16 = 20;
+const ID_COLUMN_WIDTH: u16 = 8; // Short ID
+const PID_COLUMN_WIDTH: u16 = 6;
+const STATUS_COLUMN_WIDTH: u16 = 8;
+const STARTED_COLUMN_WIDTH: u16 = 17;
+const COMMAND_COLUMN_MIN_WIDTH: u16 = 30;
+const DIRECTORY_COLUMN_WIDTH: u16 = 28; // Fixed width for directory
 
 // Column constraints for the table
 const COLUMN_CONSTRAINTS: [Constraint; 6] = [
@@ -19,8 +19,8 @@ const COLUMN_CONSTRAINTS: [Constraint; 6] = [
     Constraint::Length(PID_COLUMN_WIDTH),
     Constraint::Length(STATUS_COLUMN_WIDTH),
     Constraint::Length(STARTED_COLUMN_WIDTH),
-    Constraint::Min(COMMAND_COLUMN_MIN_WIDTH),
-    Constraint::Min(DIRECTORY_COLUMN_MIN_WIDTH),
+    Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
+    Constraint::Length(DIRECTORY_COLUMN_WIDTH), // Directory is fixed width
 ];
 
 use super::{App, TaskFilter, table_state_scroll::TableScroll};
@@ -113,6 +113,56 @@ impl<'a> TaskListWidget<'a> {
                 full_id.to_string()
             }
         }
+    }
+
+    fn format_directory(&self, path: &str) -> String {
+        if path == "-" {
+            return path.to_string();
+        }
+
+        // Replace home directory with ~
+        let path = if let Some(home_dir) = dirs::home_dir() {
+            if let Some(home_str) = home_dir.to_str() {
+                if path.starts_with(home_str) {
+                    path.replacen(home_str, "~", 1)
+                } else {
+                    path.to_string()
+                }
+            } else {
+                path.to_string()
+            }
+        } else {
+            path.to_string()
+        };
+
+        // Split path into components
+        let components: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        
+        if components.is_empty() {
+            return path;
+        }
+
+        // Format: first component + abbreviated middle components + last component
+        let mut result = String::new();
+        
+        for (i, component) in components.iter().enumerate() {
+            if i == 0 {
+                // First component (~ or first directory)
+                result.push_str(component);
+            } else if i == components.len() - 1 {
+                // Last component - show full name
+                result.push('/');
+                result.push_str(component);
+            } else {
+                // Middle components - show first character only
+                result.push('/');
+                if let Some(first_char) = component.chars().next() {
+                    result.push(first_char);
+                }
+            }
+        }
+        
+        result
     }
 
     fn create_header_row(&self) -> Row {
@@ -230,7 +280,7 @@ impl<'a> TaskListWidget<'a> {
                     let status = task.status.as_str();
                     let timestamp = self.format_timestamp(task.started_at);
                     let command = self.parse_command(&task.command);
-                    let directory = task.cwd.as_deref().unwrap_or("-");
+                    let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
 
                     Row::new(vec![
                         Cell::from(format!(" {short_id}")), // Show short ID
@@ -238,7 +288,7 @@ impl<'a> TaskListWidget<'a> {
                         Cell::from(format!(" {status}")).style(status_style),
                         Cell::from(format!(" {timestamp}")),
                         Cell::from(format!(" {command}")),
-                        Cell::from(format!(" {directory}")),
+                        Cell::from(format!(" {}", directory)),
                     ])
                 })
                 .collect();
