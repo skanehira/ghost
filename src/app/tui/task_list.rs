@@ -9,7 +9,7 @@ use ratatui::{
 const ID_COLUMN_WIDTH: u16 = 10; // Short ID (8 chars) + 2 for padding
 const PID_COLUMN_WIDTH: u16 = 8;
 const STATUS_COLUMN_WIDTH: u16 = 9;
-const STARTED_COLUMN_WIDTH: u16 = 16;
+const STARTED_COLUMN_WIDTH: u16 = 18;
 const COMMAND_COLUMN_MIN_WIDTH: u16 = 20;
 const DIRECTORY_COLUMN_MIN_WIDTH: u16 = 20;
 
@@ -96,9 +96,9 @@ impl<'a> TaskListWidget<'a> {
     }
 
     fn format_timestamp(&self, timestamp: i64) -> String {
-        use chrono::{DateTime, Utc};
-        let dt = DateTime::<Utc>::from_timestamp(timestamp, 0).unwrap();
-        dt.format("%Y-%m-%d %H:%M").to_string()
+        chrono::DateTime::from_timestamp(timestamp, 0)
+            .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
+            .unwrap_or_else(|| "Unknown".to_string())
     }
 
     fn format_short_id(&self, full_id: &str) -> String {
