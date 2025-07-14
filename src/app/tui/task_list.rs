@@ -15,12 +15,12 @@ const DIRECTORY_COLUMN_WIDTH: u16 = 28; // Fixed width for directory
 
 // Column constraints for the table
 const COLUMN_CONSTRAINTS: [Constraint; 6] = [
+    Constraint::Length(STARTED_COLUMN_WIDTH),
     Constraint::Length(ID_COLUMN_WIDTH),
     Constraint::Length(PID_COLUMN_WIDTH),
     Constraint::Length(STATUS_COLUMN_WIDTH),
-    Constraint::Length(STARTED_COLUMN_WIDTH),
-    Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
     Constraint::Length(DIRECTORY_COLUMN_WIDTH), // Directory is fixed width
+    Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
 ];
 
 use super::{App, TaskFilter, table_state_scroll::TableScroll};
@@ -167,12 +167,12 @@ impl<'a> TaskListWidget<'a> {
 
     fn create_header_row(&self) -> Row {
         Row::new(vec![
+            Cell::from(" Started"),
             Cell::from(" ID"),
             Cell::from(" PID"),
             Cell::from(" Status"),
-            Cell::from(" Started"),
-            Cell::from(" Command"),
             Cell::from(" Directory"),
+            Cell::from(" Command"),
         ])
         .style(Style::default())
     }
@@ -283,12 +283,12 @@ impl<'a> TaskListWidget<'a> {
                     let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
 
                     Row::new(vec![
+                        Cell::from(format!(" {timestamp}")),
                         Cell::from(format!(" {short_id}")), // Show short ID
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
-                        Cell::from(format!(" {timestamp}")),
-                        Cell::from(format!(" {command}")),
                         Cell::from(format!(" {}", directory)),
+                        Cell::from(format!(" {command}")),
                     ])
                 })
                 .collect();
