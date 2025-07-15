@@ -57,12 +57,35 @@ The binary will be available at `target/release/ghost`.
 ### Install
 
 ```bash
-# Copy to local bin directory
+# Using cargo install (recommended for development)
+cargo install --path .
+
+# Or copy to local bin directory  
 cp target/release/ghost ~/.local/bin/
 
 # Or to system bin (requires sudo)
 sudo cp target/release/ghost /usr/local/bin/
 ```
+
+### Development Setup
+
+For efficient development, install `just` task runner:
+
+```bash
+# Install just
+cargo install just
+
+# Build and install ghost
+just install
+
+# Other development commands
+just dev                     # Install and run development mode
+just test-all               # Install and run tests
+just watch-install          # Auto-install on file changes
+just list                   # Show available commands
+```
+
+The `just install` command runs `cargo install --path .` which builds in release mode and installs to `~/.cargo/bin/` automatically.
 
 ## Usage
 

@@ -5,22 +5,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 🚨 重要な開発注意点
 
 ### CRITICAL: ビルド後は必ずインストールする
-- **すべてのコード変更後、必ず `cargo build --release` → `cp target/release/ghost ~/.local/bin/` を実行**
+- **すべてのコード変更後、必ず `just install` を実行**
 - **理由**: 開発中のバイナリをテストするため、常に最新版をインストールする必要がある
-- **忘れがち**: コミット前やテスト前に必ずインストールを確認すること
-- **手順**:
-  1. `cargo build --release`  
-  2. `cp target/release/ghost ~/.local/bin/`
-  3. テスト実行やコミット
+- **仕組み**: `cargo install --path .` でリリースビルド+`~/.cargo/bin/`へインストール
+- **注意**: PATHの優先順位で古いバイナリが残らないよう自動削除
 
 ### 開発ワークフロー
 ```bash
-# 必須の手順
+# 効率的な手順（推奨）
 1. コード変更
-2. cargo build --release
-3. cp target/release/ghost ~/.local/bin/  # 絶対に忘れない！
-4. テスト実行
-5. git add & commit
+2. just install              # ビルド+インストールが一度に完了
+3. テスト実行
+4. git add & commit
+
+# その他の便利コマンド
+just dev                     # インストール後に開発モード
+just test-all               # インストール後にテスト実行
+just watch-install          # ファイル変更時に自動インストール
+just list                   # 利用可能なコマンド一覧
 ```
 
 ## Project Overview
