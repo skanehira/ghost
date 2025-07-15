@@ -1,6 +1,6 @@
 [package]
 name = "ghost"
-version = "1.0.0"
+version = "0.0.10"
 authors = ["skanehira"]
 edition = "2024"
 
