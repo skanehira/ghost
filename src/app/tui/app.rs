@@ -772,7 +772,7 @@ impl TuiApp {
 
     /// Extract web server info and open browser for selected task
     fn open_browser_for_task(&self, task: &Task) {
-        if let Some(port_info) = self.extract_web_server_info(task.pid) {
+        if let Some(port_info) = crate::app::helpers::extract_web_server_info(task.pid) {
             let url = if port_info.starts_with(':') {
                 format!("http://localhost{port_info}")
             } else {
@@ -784,53 +784,6 @@ impl TuiApp {
                 .arg(&url)
                 .spawn();
         }
-    }
-
-    /// Extract web server info from process ID using lsof
-    fn extract_web_server_info(&self, pid: u32) -> Option<String> {
-        // Use lsof to get actual ports used by the process
-        let output = std::process::Command::new("lsof")
-            .args(&["-p", &pid.to_string(), "-i", "-P", "-n"])
-            .output()
-            .ok()?;
-
-        if !output.status.success() {
-            return None;
-        }
-
-        let stdout = String::from_utf8(output.stdout).ok()?;
-        let pid_str = pid.to_string();
-        
-        // Parse lsof output to find listening ports for the specific PID
-        for line in stdout.lines() {
-            if line.contains("LISTEN") && line.contains("TCP") && line.contains(&pid_str) {
-                // Extract port from lines like:
-                // python3.1  7939 kazuph    4u   IPv6 ... TCP *:3001 (LISTEN)
-                if let Some(port) = self.extract_port_from_lsof_line(line) {
-                    return Some(format!(":{port}"));
-                }
-            }
-        }
-
-        None
-    }
-
-    fn extract_port_from_lsof_line(&self, line: &str) -> Option<u16> {
-        // Look for patterns like "*:3000" or "localhost:3000"
-        if let Some(port_match) = regex::Regex::new(r"\*:(\d+)|\blocalhost:(\d+)")
-            .ok()
-            .and_then(|re| re.captures(line))
-        {
-            // Try both capture groups
-            for i in 1..=2 {
-                if let Some(port_str) = port_match.get(i) {
-                    if let Ok(port) = port_str.as_str().parse::<u16>() {
-                        return Some(port);
-                    }
-                }
-            }
-        }
-        None
     }
 
 }

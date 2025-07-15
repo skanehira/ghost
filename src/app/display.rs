@@ -1,4 +1,5 @@
-use crate::app::storage::Task;
+use crate::app::storage::{Task, task_status::TaskStatus};
+use crate::app::helpers::extract_port_from_process;
 
 /// Display a list of tasks in a formatted table
 pub fn print_task_list(tasks: &[Task]) {
@@ -13,13 +14,19 @@ pub fn print_task_list(tasks: &[Task]) {
         let command_display = format_command_truncated(&task.command, 30);
         let started = format_timestamp(task.started_at, "%Y-%m-%d %H:%M");
         let cwd_display = task.cwd.as_deref().unwrap_or("-");
+        let port_display = if task.status == TaskStatus::Running {
+            extract_port_from_process(task.pid)
+        } else {
+            "-".to_string()
+        };
 
         println!(
-            "{:<36} {:<8} {:<10} {:<20} {:<30} {}",
+            "{:<36} {:<8} {:<10} {:<20} {:<6} {:<30} {}",
             &task.id,
             task.pid,
             task.status.as_str(),
             started,
+            port_display,
             command_display,
             cwd_display
         );
@@ -29,10 +36,10 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<36} {:<8} {:<10} {:<20} {:<30} Directory",
-        "Task ID", "PID", "Status", "Started", "Command"
+        "{:<36} {:<8} {:<10} {:<20} {:<6} {:<30} Directory",
+        "Task ID", "PID", "Status", "Started", "Port", "Command"
     );
-    println!("{}", "-".repeat(134));
+    println!("{}", "-".repeat(140));
 }
 
 /// Display detailed information about a single task
@@ -106,13 +113,16 @@ fn format_timestamp(timestamp: i64, format_str: &str) -> String {
         .unwrap_or_else(|| "Unknown".to_string())
 }
 
+
 /// Truncate a string to the specified length with ellipsis
+/// This function respects UTF-8 character boundaries to prevent panics with multibyte characters
 fn truncate_string(s: &str, max_length: usize) -> String {
-    if s.len() > max_length {
+    if s.chars().count() > max_length {
         if max_length >= 3 {
-            format!("{truncated}...", truncated = &s[..max_length - 3])
+            let truncated: String = s.chars().take(max_length - 3).collect();
+            format!("{truncated}...")
         } else {
-            s[..max_length].to_string()
+            s.chars().take(max_length).collect()
         }
     } else {
         s.to_string()
