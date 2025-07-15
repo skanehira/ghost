@@ -27,7 +27,10 @@ Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD
 - **Cross-View Navigation**: Seamless switching between process details and logs
 - **Command Copying**: Copy task commands to clipboard (macOS)
 - **Short ID Support**: Use abbreviated task IDs for convenience
-- **Working Directory Tracking**: See where each command was executed
+- **Working Directory Tracking**: See where each command was executed with path shortening
+- **Port Detection**: Automatic web server port detection for running processes
+- **Browser Integration**: One-key browser opening for web servers (o key)
+- **Enhanced TUI Layout**: Optimized column ordering and directory display
 - **No Daemon Required**: Simple one-shot execution model
 
 This tool was inspired by:
@@ -261,9 +264,10 @@ $ ghost list
 - `g`/`G`: Jump to top/bottom of list
 - `Enter`: View logs for selected task
 - `d`: View process details for selected task
+- `o`: Open browser for running web servers (automatic port detection)
 - `s`: Stop task (SIGTERM - graceful termination)
 - `Ctrl+K`: Kill task (SIGKILL - forced termination)  
-- `q`: Quit application
+- `q`/`Esc`: Quit application or clear search filter
 
 #### Task Filtering
 
@@ -388,6 +392,41 @@ $ ghost stop 550ef353                             # Convenient and readable
 **Error Handling:**
 - If multiple tasks match a short ID prefix, an error is shown with suggestions
 - If no tasks match, a clear "Task not found" error is displayed
+
+#### Port Detection and Browser Integration
+
+**Automatic Port Detection:**
+- Detects listening TCP ports for running processes using `lsof`
+- Shows port information in the Port column (e.g., `:3000`, `:8080`)
+- Works cross-platform (Linux, macOS)
+- Only displays ports for currently running processes
+- Safe for non-web processes (no errors for processes without listening ports)
+
+**Browser Integration:**
+- Press `o` key to open detected web servers in browser
+- Automatically constructs URL: `http://localhost:{detected_port}`
+- Only works for running processes with detected ports
+- Uses system default browser (macOS `open` command)
+
+**Examples:**
+```bash
+# Start web servers
+$ ghost run python3 -m http.server 3000
+$ ghost run npm run dev   # Usually runs on port 3001
+$ ghost run rails server  # Usually runs on port 3000
+
+# In TUI mode:
+# - Port column shows: :3000, :3001, etc.
+# - Press 'o' on any running web server to open in browser
+# - Non-web processes show '-' in Port column
+```
+
+**Enhanced Directory Display:**
+- Directory paths are shortened for better readability
+- Home directory shown as `~` 
+- Middle path components abbreviated to first character
+- Example: `/Users/john/Projects/my-app/src` → `~/P/m/src`
+- Optimized column layout with Started time moved to first column
 
 ### Key Features
 

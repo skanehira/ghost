@@ -9,16 +9,18 @@ use ratatui::{
 const ID_COLUMN_WIDTH: u16 = 8; // Short ID
 const PID_COLUMN_WIDTH: u16 = 6;
 const STATUS_COLUMN_WIDTH: u16 = 8;
+const PORT_COLUMN_WIDTH: u16 = 12; // Port/URL column
 const STARTED_COLUMN_WIDTH: u16 = 17;
 const COMMAND_COLUMN_MIN_WIDTH: u16 = 30;
-const DIRECTORY_COLUMN_WIDTH: u16 = 28; // Fixed width for directory
+const DIRECTORY_COLUMN_WIDTH: u16 = 25; // Fixed width for directory (reduced for port column)
 
 // Column constraints for the table
-const COLUMN_CONSTRAINTS: [Constraint; 6] = [
+const COLUMN_CONSTRAINTS: [Constraint; 7] = [
     Constraint::Length(STARTED_COLUMN_WIDTH),
     Constraint::Length(ID_COLUMN_WIDTH),
     Constraint::Length(PID_COLUMN_WIDTH),
     Constraint::Length(STATUS_COLUMN_WIDTH),
+    Constraint::Length(PORT_COLUMN_WIDTH), // Port/URL column
     Constraint::Length(DIRECTORY_COLUMN_WIDTH), // Directory is fixed width
     Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
 ];
@@ -165,12 +167,60 @@ impl<'a> TaskListWidget<'a> {
         result
     }
 
+    fn extract_web_server_info(&self, pid: u32) -> Option<String> {
+        // Use lsof to get actual ports used by the process
+        let output = std::process::Command::new("lsof")
+            .args(&["-p", &pid.to_string(), "-i", "-P", "-n"])
+            .output()
+            .ok()?;
+
+        if !output.status.success() {
+            return None;
+        }
+
+        let stdout = String::from_utf8(output.stdout).ok()?;
+        let pid_str = pid.to_string();
+        
+        // Parse lsof output to find listening ports for the specific PID
+        for line in stdout.lines() {
+            if line.contains("LISTEN") && line.contains("TCP") && line.contains(&pid_str) {
+                // Extract port from lines like:
+                // python3.1  7939 kazuph    4u   IPv6 ... TCP *:3001 (LISTEN)
+                if let Some(port) = self.extract_port_from_lsof_line(line) {
+                    return Some(format!(":{port}"));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn extract_port_from_lsof_line(&self, line: &str) -> Option<u16> {
+        // Look for patterns like "*:3000" or "localhost:3000"
+        if let Some(port_match) = regex::Regex::new(r"\*:(\d+)|\blocalhost:(\d+)")
+            .ok()
+            .and_then(|re| re.captures(line))
+        {
+            // Try both capture groups
+            for i in 1..=2 {
+                if let Some(port_str) = port_match.get(i) {
+                    if let Ok(port) = port_str.as_str().parse::<u16>() {
+                        return Some(port);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+
     fn create_header_row(&self) -> Row {
         Row::new(vec![
             Cell::from(" Started"),
             Cell::from(" ID"),
             Cell::from(" PID"),
             Cell::from(" Status"),
+            Cell::from(" Port"),
             Cell::from(" Directory"),
             Cell::from(" Command"),
         ])
@@ -245,6 +295,7 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
                     Cell::from(""),
@@ -253,8 +304,10 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
+                    Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
@@ -281,12 +334,18 @@ impl<'a> TaskListWidget<'a> {
                     let timestamp = self.format_timestamp(task.started_at);
                     let command = self.parse_command(&task.command);
                     let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
+                    let port_info = if task.status == TaskStatus::Running {
+                        self.extract_web_server_info(task.pid).unwrap_or_else(|| "-".to_string())
+                    } else {
+                        "-".to_string()
+                    };
 
                     Row::new(vec![
                         Cell::from(format!(" {timestamp}")),
                         Cell::from(format!(" {short_id}")), // Show short ID
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
+                        Cell::from(format!(" {port_info}")),
                         Cell::from(format!(" {}", directory)),
                         Cell::from(format!(" {command}")),
                     ])
@@ -325,12 +384,12 @@ impl<'a> TaskListWidget<'a> {
     fn render_footer_text(&self, x: u16, y: u16, width: u16, buf: &mut ratatui::buffer::Buffer) {
         let keybinds_text = if let Some(ref query) = self.search_query {
             if query.is_empty() {
-                " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
+                " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  o:Open  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
             } else {
                 format!(" Search Filter: '{}' - C-n/p:Move  Enter:Log  Tab:Status Filter  q/Esc:Clear", query)
             }
         } else {
-            " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
+            " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  o:Open  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
         };
 
         // Draw the text
