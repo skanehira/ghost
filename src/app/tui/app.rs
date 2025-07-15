@@ -8,7 +8,7 @@ use tui_scrollview::ScrollViewState;
 
 use super::log_viewer_scrollview::LogViewerScrollWidget;
 use super::table_state_scroll::TableScroll;
-use super::{SearchType, TaskFilter, ViewMode};
+use super::{ConfirmationDialog, SearchType, TaskFilter, ViewMode};
 use crate::app::config::Config;
 use crate::app::error::Result;
 use crate::app::storage;
@@ -48,6 +48,7 @@ pub struct TuiApp {
     pub is_search_filtered: bool,      // 検索フィルタリング中かどうか
     pub current_log_task: Option<Task>, // ログビュー中の選択されたタスク
     pub search_type: Option<SearchType>, // 検索のタイプ
+    pub confirmation_dialog: Option<ConfirmationDialog>, // 確認ダイアログの状態
 }
 
 impl TuiApp {
@@ -74,6 +75,7 @@ impl TuiApp {
             is_search_filtered: false,
             current_log_task: None,
             search_type: None,
+            confirmation_dialog: None,
         })
     }
 
@@ -101,6 +103,7 @@ impl TuiApp {
             is_search_filtered: false,
             current_log_task: None,
             search_type: None,
+            confirmation_dialog: None,
         })
     }
 
@@ -137,6 +140,7 @@ impl TuiApp {
             ViewMode::SearchProcessName | ViewMode::SearchLogContent | ViewMode::SearchInLog => {
                 self.handle_search_key(key)
             }
+            ViewMode::ConfirmationDialog => self.handle_confirmation_dialog_key(key),
         }
     }
 
@@ -228,6 +232,15 @@ impl TuiApp {
                         if selected_task.status == crate::app::storage::task_status::TaskStatus::Running {
                             self.open_browser_for_task(selected_task);
                         }
+                    }
+                }
+            }
+            KeyCode::Char('r') => {
+                if !self.tasks.is_empty() {
+                    let display_tasks = self.get_display_tasks();
+                    if !display_tasks.is_empty() {
+                        let selected_task = &display_tasks[self.selected_index()];
+                        self.show_restart_confirmation(selected_task);
                     }
                 }
             }
@@ -486,6 +499,7 @@ impl TuiApp {
             ViewMode::SearchProcessName | ViewMode::SearchLogContent | ViewMode::SearchInLog => {
                 self.render_search_mode(frame, area)
             }
+            ViewMode::ConfirmationDialog => self.render_confirmation_dialog(frame, area),
         }
     }
 
@@ -786,4 +800,209 @@ impl TuiApp {
         }
     }
 
+    /// Show restart/rerun confirmation dialog
+    fn show_restart_confirmation(&mut self, task: &Task) {
+        use super::{ConfirmationAction, ConfirmationDialog};
+        
+        // Parse command for display
+        let command: Vec<String> = serde_json::from_str(&task.command).unwrap_or_default();
+        let command_str = command.join(" ");
+        
+        // Determine action based on task status
+        let action = match task.status {
+            crate::app::storage::task_status::TaskStatus::Running => ConfirmationAction::Restart,
+            _ => ConfirmationAction::Rerun,
+        };
+        
+        self.confirmation_dialog = Some(ConfirmationDialog {
+            action,
+            task_id: task.id.clone(),
+            task_command: command_str,
+            selected_choice: false, // Default to No
+        });
+        
+        self.view_mode = ViewMode::ConfirmationDialog;
+    }
+
+    /// Handle confirmation dialog key input
+    fn handle_confirmation_dialog_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Char('h') | KeyCode::Left | KeyCode::Char('l') | KeyCode::Right | 
+            KeyCode::Char('j') | KeyCode::Char('k') | KeyCode::Char(' ') | KeyCode::Tab => {
+                if let Some(ref mut dialog) = self.confirmation_dialog {
+                    dialog.selected_choice = !dialog.selected_choice; // Toggle
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(dialog) = self.confirmation_dialog.take() {
+                    if dialog.selected_choice {
+                        // User chose Yes
+                        self.execute_restart_or_rerun(dialog)?;
+                    }
+                }
+                self.view_mode = ViewMode::TaskList;
+            }
+            KeyCode::Esc | KeyCode::Char('q') => {
+                self.confirmation_dialog = None;
+                self.view_mode = ViewMode::TaskList;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Execute restart or rerun based on confirmation dialog
+    fn execute_restart_or_rerun(&mut self, dialog: ConfirmationDialog) -> Result<()> {
+        // Parse command, cwd, and env from task
+        let task = self.get_task_by_id(&dialog.task_id)?;
+        let command: Vec<String> = serde_json::from_str(&task.command).unwrap_or_default();
+        let cwd = task.cwd.clone();
+        let env = task.env.as_ref()
+            .and_then(|e| serde_json::from_str::<std::collections::HashMap<String, String>>(e).ok())
+            .map(|map| map.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>())
+            .unwrap_or_default();
+        
+        match dialog.action {
+            super::ConfirmationAction::Restart => {
+                // Stop the running task first
+                let _ = crate::app::commands::stop(&dialog.task_id, false, false);
+                
+                // Wait a bit for the process to stop
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                
+                // Start the task again with original working directory and environment
+                let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
+                let _ = crate::app::commands::spawn(command, cwd_path, env);
+            }
+            super::ConfirmationAction::Rerun => {
+                // Run the command again with original working directory and environment
+                let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
+                let _ = crate::app::commands::spawn(command, cwd_path, env);
+            }
+        }
+        
+        // Refresh task list
+        self.refresh_tasks()?;
+        
+        Ok(())
+    }
+
+    /// Get task by ID
+    fn get_task_by_id(&self, task_id: &str) -> Result<&Task> {
+        self.tasks.iter()
+            .find(|t| t.id == task_id)
+            .ok_or_else(|| crate::app::error::GhostError::TaskNotFound {
+                task_id: task_id.to_string(),
+            })
+    }
+
+    /// Render confirmation dialog
+    fn render_confirmation_dialog(&mut self, frame: &mut Frame, area: Rect) {
+        use ratatui::{
+            layout::Alignment,
+            style::{Color, Style},
+            text::{Line, Span},
+            widgets::{Block, Borders, Clear, Paragraph, Wrap},
+        };
+
+        // First render the task list as background
+        self.render_task_list(frame, area);
+
+        // Create a centered area for the dialog
+        let dialog_area = popup_area(area, 70, 35);
+        
+        // Clear the dialog area
+        frame.render_widget(Clear, dialog_area);
+
+        if let Some(ref dialog) = self.confirmation_dialog {
+            // Dialog title and action
+            let action_text = match dialog.action {
+                super::ConfirmationAction::Restart => "Restart",
+                super::ConfirmationAction::Rerun => "Rerun",
+            };
+            
+            let title = format!("{} Task", action_text);
+            
+            // Create the dialog content
+            let command_text = if dialog.task_command.len() > 50 {
+                format!("{}...", &dialog.task_command[..47])
+            } else {
+                dialog.task_command.clone()
+            };
+            
+            let content = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::raw("Are you sure you want to "),
+                    Span::styled(action_text.to_lowercase(), Style::default().fg(Color::Yellow)),
+                    Span::raw(" this task?"),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::raw("Command: "),
+                    Span::styled(command_text, Style::default().fg(Color::Cyan)),
+                ]),
+                Line::from(""),
+                Line::from(""),
+            ];
+            
+            // Create buttons
+            let yes_style = if dialog.selected_choice {
+                Style::default().fg(Color::Black).bg(Color::Green)
+            } else {
+                Style::default().fg(Color::Green)
+            };
+            
+            let no_style = if !dialog.selected_choice {
+                Style::default().fg(Color::Black).bg(Color::Red)
+            } else {
+                Style::default().fg(Color::Red)
+            };
+            
+            let button_line = Line::from(vec![
+                Span::raw("      "),
+                Span::styled("[ Yes ]", yes_style),
+                Span::raw("      "),
+                Span::styled("[ No ]", no_style),
+                Span::raw("      "),
+            ]);
+            
+            let mut all_content = content;
+            all_content.push(button_line);
+            all_content.push(Line::from(""));
+            all_content.push(Line::from("h/j/k/l/Space: toggle | Enter: confirm | Esc: cancel"));
+            
+            // Create the dialog widget
+            let dialog_widget = Paragraph::new(all_content)
+                .block(Block::default().borders(Borders::ALL).title(title))
+                .alignment(Alignment::Center)
+                .wrap(Wrap { trim: true });
+            
+            frame.render_widget(dialog_widget, dialog_area);
+        }
+    }
+
+}
+
+/// Create a centered popup area
+fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+    use ratatui::layout::{Constraint, Direction, Layout};
+    
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(area);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }

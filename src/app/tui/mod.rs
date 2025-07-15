@@ -30,12 +30,27 @@ pub enum ViewMode {
     SearchProcessName,  // /キーでプロセス名検索
     SearchLogContent,   // gキーでログ内容検索
     SearchInLog,        // ログビューで/キーでログ内検索
+    ConfirmationDialog, // rキーで再起動/再実行確認ダイアログ
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SearchType {
     ProcessName,  // プロセス名での検索
     LogContent,   // ログ内容での検索
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfirmationAction {
+    Restart,  // 再起動
+    Rerun,    // 再実行
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfirmationDialog {
+    pub action: ConfirmationAction,
+    pub task_id: String,
+    pub task_command: String,
+    pub selected_choice: bool, // true: Yes, false: No (default)
 }
 
 impl Default for App {
