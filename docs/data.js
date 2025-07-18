@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1752388808740,
+  "lastUpdate": 1752839762098,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1019,6 +1019,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.15",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a0389d2a250ce1c88107bbd53625bcaf1bc4bfb",
+          "message": "chore(deps): bump clap from 4.5.40 to 4.5.41 (#6)\n\n---\nupdated-dependencies:\n- dependency-name: clap\n  dependency-version: 4.5.41\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-07-18T20:54:18+09:00",
+          "tree_id": "9021379eccf77ee0a491e84082f9f9d402c1e43a",
+          "url": "https://github.com/skanehira/ghost/commit/8a0389d2a250ce1c88107bbd53625bcaf1bc4bfb"
+        },
+        "date": 1752839761608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.03,
+            "range": "± 0.18",
             "unit": "ns/iter"
           }
         ]
