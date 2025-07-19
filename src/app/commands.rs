@@ -21,6 +21,19 @@ fn get_task_by_id_or_short_id(conn: &Connection, task_id: &str) -> Result<storag
     storage::get_task_by_short_id(conn, task_id)
 }
 
+/// Get the user's preferred shell from the SHELL environment variable
+fn get_user_shell() -> String {
+    std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
+}
+
+/// Wrap all commands with the user's shell for consistent behavior
+/// Uses login shell (-l) to load shell configuration files (.zshrc, .bashrc, etc.)
+fn wrap_with_user_shell(command: Vec<String>) -> Vec<String> {
+    let shell = get_user_shell();
+    let command_str = command.join(" ");
+    vec![shell, "-lc".to_string(), command_str]
+}
+
 /// Run a command in the background
 pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
     if command.is_empty() {
@@ -28,16 +41,42 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
             message: "No command specified".to_string(),
         });
     }
+    
+    // Always wrap with user's shell for consistent behavior and config loading
+    let processed_command = wrap_with_user_shell(command.clone());
+    
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
-    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
+    let (process_info, _) = spawn_and_register_process(
+        command, // Original command for database
+        processed_command, // Wrapped command for execution
+        cwd,
+        env_vars,
+        &conn
+    )?;
+    
+    // Verify process actually started
+    let process_started = helpers::wait_for_process_start(
+        process_info.pid,
+        std::time::Duration::from_secs(2)
+    )?;
+    
+    if !process_started {
+        // Update status to exited if process failed to start
+        storage::update_task_status(&conn, &process_info.id, storage::TaskStatus::Exited, Some(1))?;
+        return Err(error::GhostError::ProcessSpawn {
+            message: "Process exited immediately after starting".to_string(),
+        });
+    }
+    
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
     Ok(())
 }
 
 /// Spawn process and register it in the database
 fn spawn_and_register_process(
-    command: Vec<String>,
+    original_command: Vec<String>,
+    execution_command: Vec<String>,
     cwd: Option<PathBuf>,
     env_vars: Vec<(String, String)>,
     conn: &Connection,
@@ -49,7 +88,7 @@ fn spawn_and_register_process(
     };
 
     let (process_info, child) = process::spawn_background_process_with_env(
-        command.clone(),
+        execution_command,
         effective_cwd.clone(),
         None,
         env_vars,
@@ -66,7 +105,7 @@ fn spawn_and_register_process(
         &process_info.id,
         process_info.pid,
         Some(process_info.pgid),
-        &command,
+        &original_command, // Save original command, not wrapped version
         env,
         effective_cwd.as_deref(),
         &process_info.log_path,

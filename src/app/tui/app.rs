@@ -853,6 +853,9 @@ impl TuiApp {
 
     /// Execute restart or rerun based on confirmation dialog
     fn execute_restart_or_rerun(&mut self, dialog: ConfirmationDialog) -> Result<()> {
+        use crate::app::helpers;
+        use std::time::Duration;
+        
         // Parse command, cwd, and env from task
         let task = self.get_task_by_id(&dialog.task_id)?;
         let command: Vec<String> = serde_json::from_str(&task.command).unwrap_or_default();
@@ -864,20 +867,63 @@ impl TuiApp {
         
         match dialog.action {
             super::ConfirmationAction::Restart => {
-                // Stop the running task first
-                let _ = crate::app::commands::stop(&dialog.task_id, false, false);
+                // Kill process and wait for termination (up to 5 seconds)
+                let terminated = helpers::kill_and_wait(
+                    task.pid,
+                    task.pgid,
+                    false, // Use SIGTERM first
+                    Duration::from_secs(5)
+                )?;
                 
-                // Wait a bit for the process to stop
-                std::thread::sleep(std::time::Duration::from_millis(100));
+                if !terminated {
+                    // If process didn't terminate, try SIGKILL
+                    let _ = helpers::kill_and_wait(
+                        task.pid,
+                        task.pgid,
+                        true, // Force kill
+                        Duration::from_secs(2)
+                    );
+                }
+                
+                // Update task status in database
+                let conn = crate::app::storage::init_database()?;
+                crate::app::storage::update_task_status(
+                    &conn,
+                    &dialog.task_id,
+                    crate::app::storage::TaskStatus::Killed,
+                    None
+                )?;
                 
                 // Start the task again with original working directory and environment
                 let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
-                let _ = crate::app::commands::spawn(command, cwd_path, env);
+                match crate::app::commands::spawn(command, cwd_path, env) {
+                    Ok(_) => {
+                        // Success - the spawn function already verifies the process started
+                    },
+                    Err(e) => {
+                        // Show error to user in a more visible way
+                        eprintln!("❌ Failed to restart task: {}", e);
+                        
+                        // Optionally, you could store this error message to display in the UI
+                        // For now, we'll just continue so the UI refreshes
+                    }
+                }
             }
             super::ConfirmationAction::Rerun => {
                 // Run the command again with original working directory and environment
                 let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
-                let _ = crate::app::commands::spawn(command, cwd_path, env);
+                match crate::app::commands::spawn(command, cwd_path, env) {
+                    Ok(_) => {
+                        // Success - the spawn function already verifies the process started
+                    },
+                    Err(e) => {
+                        // Show error to user in a more visible way
+                        eprintln!("❌ Failed to rerun task: {}", e);
+                        
+                        // Optionally, you could store this error message to display in the UI
+                        // For now, we'll just continue so the UI refreshes
+                    }
+                }
             }
         }
         
