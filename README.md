@@ -375,12 +375,20 @@ Task List → [Enter] → Log View → [d] → Process Details → [l] → Log V
 
 #### Log Viewer
 
+**Log Viewer Features:**
+- **Auto-Scroll Mode**: Press `f` to enable tail -f like auto-scrolling
+- Shows `[Auto-Scroll]` indicator when active
+- Automatically scrolls to bottom when new log content arrives
+- Manual scrolling (j/k/g/Ctrl+D/Ctrl+U) disables auto-scroll
+- Press `f` again to toggle auto-scroll off/on
+
 **Log Viewer Keybindings:**
-- `j`/`k`: Scroll up/down
+- `j`/`k`: Scroll up/down (disables auto-scroll if active)
 - `h`/`l`: Scroll left/right (for long lines)
-- `g`/`G`: Jump to top/bottom
+- `g`/`G`: Jump to top/bottom (g disables auto-scroll)
+- `f`: Toggle auto-scroll mode (like tail -f)
 - `d`: Switch to process details for the same task
-- `Ctrl+D`/`Ctrl+U`: Page down/up
+- `Ctrl+D`/`Ctrl+U`: Page down/up (disables auto-scroll if active)
 - `/`: Search within current log (coming soon)
 - `Esc`/`q`: Return to task list
 - Maintains search filter state when returning

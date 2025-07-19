@@ -49,6 +49,7 @@ pub struct TuiApp {
     pub current_log_task: Option<Task>, // ログビュー中の選択されたタスク
     pub search_type: Option<SearchType>, // 検索のタイプ
     pub confirmation_dialog: Option<ConfirmationDialog>, // 確認ダイアログの状態
+    pub log_auto_scroll: bool, // ログの自動スクロール機能（tail -f モード）
 }
 
 impl TuiApp {
@@ -76,6 +77,7 @@ impl TuiApp {
             current_log_task: None,
             search_type: None,
             confirmation_dialog: None,
+            log_auto_scroll: false,
         })
     }
 
@@ -104,6 +106,7 @@ impl TuiApp {
             current_log_task: None,
             search_type: None,
             confirmation_dialog: None,
+            log_auto_scroll: false,
         })
     }
 
@@ -279,12 +282,18 @@ impl TuiApp {
                 self.log_scroll_state.scroll_to_top();
                 // Clear the current log task
                 self.current_log_task = None;
+                // Reset auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('j') => {
                 self.log_scroll_state.scroll_down();
+                // Manual scrolling disables auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('k') => {
                 self.log_scroll_state.scroll_up();
+                // Manual scrolling disables auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('h') => {
                 self.log_scroll_state.scroll_left();
@@ -297,18 +306,34 @@ impl TuiApp {
                 for _ in 0..10 {
                     self.log_scroll_state.scroll_down();
                 }
+                // Manual scrolling disables auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 // Scroll up multiple lines (half page)
                 for _ in 0..10 {
                     self.log_scroll_state.scroll_up();
                 }
+                // Manual scrolling disables auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
                 self.log_scroll_state.scroll_to_top();
+                // Manual scrolling disables auto-scroll
+                self.log_auto_scroll = false;
             }
             KeyCode::Char('G') => {
                 self.log_scroll_state.scroll_to_bottom();
+                // When jumping to bottom, could enable auto-scroll
+                // but let's keep it manual for now
+            }
+            KeyCode::Char('f') => {
+                // Toggle auto-scroll mode (like tail -f)
+                self.log_auto_scroll = !self.log_auto_scroll;
+                if self.log_auto_scroll {
+                    // When enabling auto-scroll, jump to bottom
+                    self.log_scroll_state.scroll_to_bottom();
+                }
             }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
@@ -484,6 +509,9 @@ impl TuiApp {
 
                 // Reset scroll state to start from the top
                 self.log_scroll_state.scroll_to_top();
+                
+                // Reset auto-scroll when opening log view
+                self.log_auto_scroll = false;
             }
         }
     }
@@ -652,10 +680,43 @@ impl TuiApp {
             }
 
             // Update line count
-            self.log_lines_count = scrollview_widget.get_lines_count();
+            let new_lines_count = scrollview_widget.get_lines_count();
+            let lines_added = new_lines_count > self.log_lines_count;
+            self.log_lines_count = new_lines_count;
+
+            // Auto-scroll to bottom if enabled and new content was added
+            if self.log_auto_scroll && lines_added {
+                self.log_scroll_state.scroll_to_bottom();
+            }
 
             // Render with scrollview state
             frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
+            
+            // Show auto-scroll indicator
+            if self.log_auto_scroll {
+                use ratatui::{
+                    style::{Color, Style},
+                    text::{Line, Span},
+                    widgets::Paragraph,
+                };
+                
+                // Create a small indicator in the top-right corner
+                let indicator_width = 14; // " [Auto-Scroll] "
+                let indicator_height = 1;
+                let x = area.right().saturating_sub(indicator_width + 1);
+                let y = area.y + 1;
+                
+                if x > area.x && y < area.bottom() {
+                    let indicator_area = Rect::new(x, y, indicator_width, indicator_height);
+                    
+                    let indicator = Paragraph::new(Line::from(vec![
+                        Span::styled(" ", Style::default()),
+                        Span::styled("[Auto-Scroll]", Style::default().fg(Color::Yellow)),
+                    ]));
+                    
+                    frame.render_widget(indicator, indicator_area);
+                }
+            }
         }
     }
 

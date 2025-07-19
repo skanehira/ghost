@@ -115,7 +115,7 @@ impl LogViewerScrollWidget {
 
     /// Create footer widget
     fn create_footer(&self) -> Paragraph {
-        let keybinds = " j/k:Scroll  h/l:Horizontal  C-d/C-u:Page  gg/G:Top/Bottom  d:Details  /:Search  q/Esc:Back ";
+        let keybinds = " j/k:Scroll  h/l:Horizontal  C-d/C-u:Page  gg/G:Top/Bottom  f:Auto-Scroll  d:Details  /:Search  q/Esc:Back ";
 
         Paragraph::new(keybinds).block(
             Block::default()
