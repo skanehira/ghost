@@ -1,10 +1,10 @@
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect, Size},
     style::{Color, Modifier, Style},
     symbols,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
+    Frame,
 };
 use tui_scrollview::{ScrollView, ScrollViewState, ScrollbarVisibility};
 
@@ -94,13 +94,18 @@ impl<'a> ProcessDetailsWidget<'a> {
         let status_text = format!("{} ({})", self.task.status.as_str(), runtime);
 
         // Format started time
-        let started_time = Utc.timestamp_opt(self.task.started_at, 0)
+        let started_time = Utc
+            .timestamp_opt(self.task.started_at, 0)
             .single()
             .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
             .unwrap_or_else(|| "Unknown".to_string());
 
         // Build info lines
         let info_lines = vec![
+            Line::from(vec![
+                Span::styled("Directory: ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(self.task.cwd.as_deref().unwrap_or("N/A")),
+            ]),
             Line::from(vec![
                 Span::styled("Started: ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(started_time),
@@ -127,10 +132,6 @@ impl<'a> ProcessDetailsWidget<'a> {
                 Span::raw(" | "),
                 Span::styled("PGID: ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(self.task.pgid.map_or("N/A".to_string(), |p| p.to_string())),
-            ]),
-            Line::from(vec![
-                Span::styled("Directory: ", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(self.task.cwd.as_deref().unwrap_or("N/A")),
             ]),
         ];
 

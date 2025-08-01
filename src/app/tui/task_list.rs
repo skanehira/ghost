@@ -1,8 +1,8 @@
 use ratatui::{
-    Frame,
     layout::{Constraint, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Cell, Row, StatefulWidget, Table, TableState, Widget},
+    Frame,
 };
 
 // Layout constants
@@ -25,7 +25,7 @@ const COLUMN_CONSTRAINTS: [Constraint; 7] = [
     Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
 ];
 
-use super::{App, TaskFilter, table_state_scroll::TableScroll};
+use super::{table_state_scroll::TableScroll, App, TaskFilter};
 use crate::app::storage::task::Task;
 use crate::app::storage::task_status::TaskStatus;
 
@@ -41,7 +41,7 @@ pub struct TaskListWidget<'a> {
     tasks: Vec<Task>,
     filter: &'a TaskFilter,
     table_scroll: &'a mut TableScroll,
-    search_query: Option<String>,  // 検索クエリ表示用
+    search_query: Option<String>, // 検索クエリ表示用
 }
 
 impl<'a> TaskListWidget<'a> {
@@ -139,14 +139,14 @@ impl<'a> TaskListWidget<'a> {
 
         // Split path into components
         let components: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        
+
         if components.is_empty() {
             return path;
         }
 
         // Format: first component + abbreviated middle components + last component
         let mut result = String::new();
-        
+
         for (i, component) in components.iter().enumerate() {
             if i == 0 {
                 // First component (~ or first directory)
@@ -163,11 +163,9 @@ impl<'a> TaskListWidget<'a> {
                 }
             }
         }
-        
+
         result
     }
-
-
 
     fn create_header_row(&self) -> Row {
         Row::new(vec![
@@ -290,7 +288,8 @@ impl<'a> TaskListWidget<'a> {
                     let command = self.parse_command(&task.command);
                     let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
                     let port_info = if task.status == TaskStatus::Running {
-                        crate::app::helpers::extract_web_server_info(task.pid).unwrap_or_else(|| "-".to_string())
+                        crate::app::helpers::extract_web_server_info(task.pid)
+                            .unwrap_or_else(|| "-".to_string())
                     } else {
                         "-".to_string()
                     };
@@ -301,7 +300,7 @@ impl<'a> TaskListWidget<'a> {
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
                         Cell::from(format!(" {port_info}")),
-                        Cell::from(format!(" {}", directory)),
+                        Cell::from(format!(" {directory}")),
                         Cell::from(format!(" {command}")),
                     ])
                 })
@@ -341,7 +340,7 @@ impl<'a> TaskListWidget<'a> {
             if query.is_empty() {
                 " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  o:Open  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()
             } else {
-                format!(" Search Filter: '{}' - C-n/p:Move  Enter:Log  Tab:Status Filter  q/Esc:Clear", query)
+                format!(" Search Filter: '{query}' - C-n/p:Move  Enter:Log  Tab:Status Filter  q/Esc:Clear")
             }
         } else {
             " j/k:Move  g/G:Top/Bot  Enter:Log  d:Details  o:Open  s:Stop  C-k:Kill  /:Search  Tab:Status Filter  q:Quit".to_string()

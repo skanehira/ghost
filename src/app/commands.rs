@@ -16,7 +16,7 @@ fn get_task_by_id_or_short_id(conn: &Connection, task_id: &str) -> Result<storag
             Err(e) => return Err(e),
         }
     }
-    
+
     // Try short ID search
     storage::get_task_by_short_id(conn, task_id)
 }
@@ -41,34 +41,37 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
             message: "No command specified".to_string(),
         });
     }
-    
+
     // Always wrap with user's shell for consistent behavior and config loading
     let processed_command = wrap_with_user_shell(command.clone());
-    
+
     let env_vars = config::env::parse_env_vars(&env)?;
     let conn = storage::init_database()?;
     let (process_info, _) = spawn_and_register_process(
-        command, // Original command for database
+        command,           // Original command for database
         processed_command, // Wrapped command for execution
         cwd,
         env_vars,
-        &conn
+        &conn,
     )?;
-    
+
     // Verify process actually started
-    let process_started = helpers::wait_for_process_start(
-        process_info.pid,
-        std::time::Duration::from_secs(2)
-    )?;
-    
+    let process_started =
+        helpers::wait_for_process_start(process_info.pid, std::time::Duration::from_secs(2))?;
+
     if !process_started {
         // Update status to exited if process failed to start
-        storage::update_task_status(&conn, &process_info.id, storage::TaskStatus::Exited, Some(1))?;
+        storage::update_task_status(
+            &conn,
+            &process_info.id,
+            storage::TaskStatus::Exited,
+            Some(1),
+        )?;
         return Err(error::GhostError::ProcessSpawn {
             message: "Process exited immediately after starting".to_string(),
         });
     }
-    
+
     display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
     Ok(())
 }
@@ -124,21 +127,49 @@ pub fn list(status_filter: Option<String>) -> Result<()> {
 }
 
 /// Show logs for a process
-pub async fn log(task_id: &str, follow: bool) -> Result<()> {
+pub async fn log(task_id: &str, follow: bool, all: bool, head: usize, tail: usize) -> Result<()> {
     let conn = storage::init_database()?;
     let task = get_task_by_id_or_short_id(&conn, task_id)?;
 
     let log_path = PathBuf::from(&task.log_path);
-    let content =
-        std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
-            message: format!("Failed to read log file: {e}"),
-        })?;
 
     if follow {
         display::print_log_follow_header(task_id, &task.log_path);
         helpers::follow_log_file(&log_path).await?;
     } else {
-        print!("{content}");
+        let content =
+            std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
+                message: format!("Failed to read log file: {e}"),
+            })?;
+
+        if all || content.is_empty() {
+            // Show all content
+            print!("{content}");
+        } else {
+            // Show head + tail
+            let lines: Vec<&str> = content.lines().collect();
+            let total_lines = lines.len();
+
+            if total_lines <= head + tail {
+                // If total lines is less than or equal to head + tail, show all
+                print!("{content}");
+            } else {
+                // Show head lines
+                for line in lines.iter().take(head) {
+                    println!("{line}");
+                }
+
+                // Show separator if there are skipped lines
+                if total_lines > head + tail {
+                    println!("\n... {} lines omitted ...\n", total_lines - head - tail);
+                }
+
+                // Show tail lines
+                for line in lines.iter().skip(total_lines.saturating_sub(tail)) {
+                    println!("{line}");
+                }
+            }
+        }
     }
 
     Ok(())
@@ -169,6 +200,72 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     if show_output {
         let pid = task.pid;
         println!("Process {task_id} ({pid}) has been {status}");
+    }
+
+    Ok(())
+}
+
+/// Restart a background process
+pub fn restart(task_id: &str, force: bool) -> Result<()> {
+    let conn = storage::init_database()?;
+    let task = get_task_by_id_or_short_id(&conn, task_id)?;
+
+    // Parse command, cwd, and env from task
+    let command: Vec<String> =
+        serde_json::from_str(&task.command).map_err(|e| error::GhostError::InvalidArgument {
+            message: format!("Failed to parse command: {e}"),
+        })?;
+    let cwd = task.cwd.clone().map(PathBuf::from);
+    let env = task
+        .env
+        .as_ref()
+        .and_then(|e| serde_json::from_str::<std::collections::HashMap<String, String>>(e).ok())
+        .map(|map| {
+            map.iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    // Check if the task is still running
+    let is_running = process::exists(task.pid);
+
+    if is_running {
+        // Task is running, stop it first
+        println!("Stopping task {task_id}...");
+
+        // Kill process and wait for termination
+        use std::time::Duration;
+        let terminated =
+            helpers::kill_and_wait(task.pid, task.pgid, force, Duration::from_secs(5))?;
+
+        if !terminated && !force {
+            // If process didn't terminate with SIGTERM, try SIGKILL
+            println!("Process did not terminate gracefully, forcing kill...");
+            let _ = helpers::kill_and_wait(
+                task.pid,
+                task.pgid,
+                true, // Force kill
+                Duration::from_secs(2),
+            );
+        }
+
+        // Update task status in database
+        storage::update_task_status(&conn, &task.id, storage::TaskStatus::Killed, None)?;
+    }
+
+    // Start the task again with original working directory and environment
+    println!("Starting task {task_id}...");
+    match spawn(command, cwd, env) {
+        Ok(_) => {
+            let action = if is_running { "restarted" } else { "rerun" };
+            println!("Task {task_id} has been {action} successfully");
+        }
+        Err(e) => {
+            return Err(error::GhostError::InvalidArgument {
+                message: format!("Failed to restart task: {e}"),
+            });
+        }
     }
 
     Ok(())
@@ -298,12 +395,12 @@ pub async fn tui() -> Result<()> {
     use crossterm::{
         event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream},
         execute,
-        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     };
     use futures::StreamExt;
-    use ratatui::{Terminal, backend::CrosstermBackend};
+    use ratatui::{backend::CrosstermBackend, Terminal};
     use std::io;
-    use tokio::time::{Duration, interval};
+    use tokio::time::{interval, Duration};
 
     use crate::app::tui::app::TuiApp;
 

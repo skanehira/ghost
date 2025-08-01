@@ -168,6 +168,39 @@ Log file: /Users/user/Library/Application Support/ghost/logs/e56ed5f8-44c8-4905-
 Processing file 1/10
 Processing file 2/10
 ...
+
+# View partial logs (default: head 100 + tail 100)
+$ ghost log 6a68d91f
+Line 1
+Line 2
+...
+Line 100
+
+... 300 lines omitted ...
+
+Line 401
+Line 402
+...
+Line 500
+
+# View all logs
+$ ghost log 6a68d91f --all
+Line 1
+Line 2
+...
+Line 500
+
+# View custom head/tail
+$ ghost log 6a68d91f --head 10 --tail 5
+Line 1
+...
+Line 10
+
+... 485 lines omitted ...
+
+Line 496
+...
+Line 500
 ```
 
 #### Check task status
@@ -211,6 +244,41 @@ Process c3d4e5f6 (12347) has been killed
 $ ghost stop 9fe034eb
 Error: Task operation failed: 9fe034eb-2ce7-4809-af10-2c99af15583d - Task is not running (status: exited)
 ```
+
+#### Restart a task
+
+```bash
+# Restart a running task (stop and start again)
+$ ghost restart e56ed5f8
+Stopping task e56ed5f8...
+Starting task e56ed5f8...
+Started background process:
+  Task ID: bf294251-eb9c-42e7-8c55-abeaccb81dd0
+  PID: 62187
+  Log file: /Users/user/Library/Application Support/ghost/logs/bf294251-eb9c-42e7-8c55-abeaccb81dd0.log
+Task e56ed5f8 has been restarted successfully
+
+# Restart a stopped task (simply run again)
+$ ghost restart 9fe034eb
+Starting task 9fe034eb...
+Started background process:
+  Task ID: d3e4f5g6-h7i8-9012-jklm-345678901234
+  PID: 62188
+  Log file: /Users/user/Library/Application Support/ghost/logs/d3e4f5g6-h7i8-9012-jklm-345678901234.log
+Task 9fe034eb has been rerun successfully
+
+# Force restart with SIGKILL
+$ ghost restart c3d4e5f6 --force
+Stopping task c3d4e5f6...
+Starting task c3d4e5f6...
+Task c3d4e5f6 has been restarted successfully
+```
+
+**Restart Features:**
+- Preserves original working directory
+- Preserves original environment variables
+- Running tasks are stopped first, then restarted
+- Stopped tasks are simply run again (rerun)
 
 #### Clean up old tasks
 

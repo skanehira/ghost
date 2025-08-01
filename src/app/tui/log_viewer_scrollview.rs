@@ -18,6 +18,7 @@ pub struct LogViewerScrollWidget {
     lines: Vec<String>,
     task_id: String,
     command: String,
+    cwd: Option<String>,
 }
 
 impl LogViewerScrollWidget {
@@ -28,6 +29,7 @@ impl LogViewerScrollWidget {
             lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            cwd: task.cwd.clone(),
         }
     }
 
@@ -37,6 +39,7 @@ impl LogViewerScrollWidget {
             lines: cached_lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            cwd: task.cwd.clone(),
         }
     }
 
@@ -72,6 +75,7 @@ impl LogViewerScrollWidget {
             lines: existing_lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            cwd: task.cwd.clone(),
         }
     }
 
@@ -152,7 +156,11 @@ impl StatefulWidget for LogViewerScrollWidget {
         let content_size = Size::new(content_width, content_height);
 
         // Create a block for the content area with borders and title
-        let title = format!(" {} - {} ", self.task_id, self.command);
+        let title = if let Some(cwd) = &self.cwd {
+            format!(" {} - {} - {} ", cwd, self.task_id, self.command)
+        } else {
+            format!(" {} - {} ", self.task_id, self.command)
+        };
         let content_block = Block::default()
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(Style::default().fg(Color::LightMagenta))
@@ -230,8 +238,8 @@ impl StatefulWidget for LogViewerScrollWidget {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -242,7 +250,7 @@ mod tests {
             pgid: Some(12345),
             command: r#"["echo","test"]"#.to_string(),
             env: None,
-            cwd: None,
+            cwd: Some("/home/user/project".to_string()),
             status: crate::app::storage::task_status::TaskStatus::Running,
             exit_code: None,
             started_at: 1704109200,

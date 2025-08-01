@@ -1,5 +1,5 @@
-use crate::app::storage::{Task, task_status::TaskStatus};
 use crate::app::helpers::extract_port_from_process;
+use crate::app::storage::{task_status::TaskStatus, Task};
 
 /// Display a list of tasks in a formatted table
 pub fn print_task_list(tasks: &[Task]) {
@@ -112,7 +112,6 @@ fn format_timestamp(timestamp: i64, format_str: &str) -> String {
         .map(|dt| dt.format(format_str).to_string())
         .unwrap_or_else(|| "Unknown".to_string())
 }
-
 
 /// Truncate a string to the specified length with ellipsis
 /// This function respects UTF-8 character boundaries to prevent panics with multibyte characters

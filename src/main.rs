@@ -46,6 +46,18 @@ enum Commands {
         /// Follow log output (like tail -f)
         #[arg(short, long)]
         follow: bool,
+
+        /// Show all log content (default: head 100 + tail 100)
+        #[arg(short, long)]
+        all: bool,
+
+        /// Number of lines from the beginning (default: 100, ignored if --all)
+        #[arg(long, default_value = "100")]
+        head: usize,
+
+        /// Number of lines from the end (default: 100, ignored if --all)
+        #[arg(long, default_value = "100")]
+        tail: usize,
     },
 
     /// Stop a background process
@@ -62,6 +74,16 @@ enum Commands {
     Status {
         /// Task ID to check
         task_id: String,
+    },
+
+    /// Restart a background process
+    Restart {
+        /// Task ID to restart
+        task_id: String,
+
+        /// Force kill the process (SIGKILL instead of SIGTERM)
+        #[arg(short, long)]
+        force: bool,
     },
 
     /// Clean up old finished tasks
@@ -91,9 +113,16 @@ async fn main() {
     let result = match cli.command {
         Some(Commands::Run { command, cwd, env }) => commands::spawn(command, cwd, env),
         Some(Commands::List { status }) => commands::list(status),
-        Some(Commands::Log { task_id, follow }) => commands::log(&task_id, follow).await,
+        Some(Commands::Log {
+            task_id,
+            follow,
+            all,
+            head,
+            tail,
+        }) => commands::log(&task_id, follow, all, head, tail).await,
         Some(Commands::Stop { task_id, force }) => commands::stop(&task_id, force, true),
         Some(Commands::Status { task_id }) => commands::status(&task_id),
+        Some(Commands::Restart { task_id, force }) => commands::restart(&task_id, force),
         Some(Commands::Cleanup {
             days,
             status,

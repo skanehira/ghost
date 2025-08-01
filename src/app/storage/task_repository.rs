@@ -158,13 +158,13 @@ pub fn delete_task(conn: &Connection, task_id: &str) -> Result<()> {
 
 /// Get a task by short ID (prefix match)
 pub fn get_task_by_short_id(conn: &Connection, short_id: &str) -> Result<Task> {
-    let pattern = format!("{}%", short_id);
+    let pattern = format!("{short_id}%");
     let mut stmt = conn.prepare(
         "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks WHERE id LIKE ?1 ORDER BY started_at DESC"
     )?;
 
     let mut task_iter = stmt.query_map([&pattern], row_to_task)?;
-    
+
     match task_iter.next() {
         Some(task) => {
             let task = task?;

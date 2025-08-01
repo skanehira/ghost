@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use ratatui::{Frame, layout::Rect};
+use ratatui::{layout::Rect, Frame};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fs;
@@ -43,13 +43,13 @@ pub struct TuiApp {
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
     pub search_query: String,
-    pub previous_view_mode: ViewMode,  // 検索モードから戻るため
-    pub filtered_tasks: Vec<Task>,     // フィルタリング済みタスク
-    pub is_search_filtered: bool,      // 検索フィルタリング中かどうか
-    pub current_log_task: Option<Task>, // ログビュー中の選択されたタスク
+    pub previous_view_mode: ViewMode,    // 検索モードから戻るため
+    pub filtered_tasks: Vec<Task>,       // フィルタリング済みタスク
+    pub is_search_filtered: bool,        // 検索フィルタリング中かどうか
+    pub current_log_task: Option<Task>,  // ログビュー中の選択されたタスク
     pub search_type: Option<SearchType>, // 検索のタイプ
     pub confirmation_dialog: Option<ConfirmationDialog>, // 確認ダイアログの状態
-    pub log_auto_scroll: bool, // ログの自動スクロール機能（tail -f モード）
+    pub log_auto_scroll: bool,           // ログの自動スクロール機能（tail -f モード）
 }
 
 impl TuiApp {
@@ -232,7 +232,9 @@ impl TuiApp {
                     if !display_tasks.is_empty() {
                         let selected_task = &display_tasks[self.selected_index()];
                         // Only open browser for running web servers
-                        if selected_task.status == crate::app::storage::task_status::TaskStatus::Running {
+                        if selected_task.status
+                            == crate::app::storage::task_status::TaskStatus::Running
+                        {
                             self.open_browser_for_task(selected_task);
                         }
                     }
@@ -445,7 +447,8 @@ impl TuiApp {
                     self.is_search_filtered = true;
                     self.view_mode = ViewMode::TaskList;
                     // Keep current selection position, just update total items
-                    self.table_scroll.set_total_items(self.get_display_tasks().len());
+                    self.table_scroll
+                        .set_total_items(self.get_display_tasks().len());
                 }
                 // If search query is empty, do nothing (don't change modes)
             }
@@ -493,10 +496,10 @@ impl TuiApp {
             let display_tasks = self.get_display_tasks();
             if selected < display_tasks.len() {
                 let selected_task = &display_tasks[selected];
-                
+
                 // Save the selected task for log view
                 self.current_log_task = Some(selected_task.clone());
-                
+
                 let log_path = &selected_task.log_path;
 
                 // Check cache first
@@ -509,7 +512,7 @@ impl TuiApp {
 
                 // Reset scroll state to start from the top
                 self.log_scroll_state.scroll_to_top();
-                
+
                 // Reset auto-scroll when opening log view
                 self.log_auto_scroll = false;
             }
@@ -537,7 +540,12 @@ impl TuiApp {
 
         let display_tasks = self.get_display_tasks();
         let widget = if self.is_search_filtered && !self.search_query.is_empty() {
-            TaskListWidget::with_search(display_tasks, &self.filter, &mut self.table_scroll, self.search_query.clone())
+            TaskListWidget::with_search(
+                display_tasks,
+                &self.filter,
+                &mut self.table_scroll,
+                self.search_query.clone(),
+            )
         } else {
             TaskListWidget::new(display_tasks, &self.filter, &mut self.table_scroll)
         };
@@ -560,7 +568,7 @@ impl TuiApp {
 
         // Render task list with search results
         use super::task_list::TaskListWidget;
-        
+
         let display_tasks = self.get_display_tasks();
         let widget = TaskListWidget::with_search(
             display_tasks,
@@ -572,9 +580,18 @@ impl TuiApp {
 
         // Render search input at bottom with help text
         let (search_title, help_text) = match self.view_mode {
-            ViewMode::SearchProcessName => ("Search Process Name", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
-            ViewMode::SearchLogContent => ("Search in Logs (grep)", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
-            ViewMode::SearchInLog => ("Search in Current Log", " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel"),
+            ViewMode::SearchProcessName => (
+                "Search Process Name",
+                " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel",
+            ),
+            ViewMode::SearchLogContent => (
+                "Search in Logs (grep)",
+                " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel",
+            ),
+            ViewMode::SearchInLog => (
+                "Search in Current Log",
+                " Enter:Log  Tab:Execute  C-n/p/j/k:Move  Esc:Cancel",
+            ),
             _ => ("Search", " Enter:Log  Tab:Execute  Esc:Cancel"),
         };
 
@@ -596,17 +613,23 @@ impl TuiApp {
         frame.render_widget(search_text, search_chunks[0]);
 
         // Render help text with current match count
-        let match_count = if matches!(self.view_mode, ViewMode::SearchProcessName | ViewMode::SearchLogContent) {
+        let match_count = if matches!(
+            self.view_mode,
+            ViewMode::SearchProcessName | ViewMode::SearchLogContent
+        ) {
             format!(" {} matches  {}", self.filtered_tasks.len(), help_text)
         } else {
             help_text.to_string()
         };
-        let help_paragraph = Paragraph::new(match_count)
-            .style(Style::default().fg(Color::DarkGray));
+        let help_paragraph =
+            Paragraph::new(match_count).style(Style::default().fg(Color::DarkGray));
         frame.render_widget(help_paragraph, search_chunks[1]);
 
         // Set cursor position (inside border, after text)
-        frame.set_cursor_position((search_chunks[0].x + 1 + self.search_query.len() as u16, search_chunks[0].y + 1));
+        frame.set_cursor_position((
+            search_chunks[0].x + 1 + self.search_query.len() as u16,
+            search_chunks[0].y + 1,
+        ));
     }
 
     /// Render log view widget
@@ -654,10 +677,7 @@ impl TuiApp {
                 }
                 UpdateStrategy::UseCache => {
                     let cache = self.log_cache.get(log_path).unwrap();
-                    LogViewerScrollWidget::with_cached_content(
-                        selected_task,
-                        cache.content.clone(),
-                    )
+                    LogViewerScrollWidget::with_cached_content(selected_task, cache.content.clone())
                 }
             };
 
@@ -691,7 +711,7 @@ impl TuiApp {
 
             // Render with scrollview state
             frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
-            
+
             // Show auto-scroll indicator
             if self.log_auto_scroll {
                 use ratatui::{
@@ -699,21 +719,21 @@ impl TuiApp {
                     text::{Line, Span},
                     widgets::Paragraph,
                 };
-                
+
                 // Create a small indicator in the top-right corner
                 let indicator_width = 14; // " [Auto-Scroll] "
                 let indicator_height = 1;
                 let x = area.right().saturating_sub(indicator_width + 1);
                 let y = area.y + 1;
-                
+
                 if x > area.x && y < area.bottom() {
                     let indicator_area = Rect::new(x, y, indicator_width, indicator_height);
-                    
+
                     let indicator = Paragraph::new(Line::from(vec![
                         Span::styled(" ", Style::default()),
                         Span::styled("[Auto-Scroll]", Style::default().fg(Color::Yellow)),
                     ]));
-                    
+
                     frame.render_widget(indicator, indicator_area);
                 }
             }
@@ -782,7 +802,8 @@ impl TuiApp {
         }
 
         let query = self.search_query.to_lowercase();
-        self.filtered_tasks = self.tasks
+        self.filtered_tasks = self
+            .tasks
             .iter()
             .filter(|task| {
                 match self.search_type {
@@ -805,9 +826,7 @@ impl TuiApp {
     /// Get display tasks (filtered or original)
     fn get_display_tasks(&self) -> Vec<Task> {
         // If we have a search query (either in search mode or confirmed search), use filtered tasks
-        if !self.search_query.is_empty() {
-            self.filtered_tasks.clone()
-        } else if self.is_search_filtered {
+        if !self.search_query.is_empty() || self.is_search_filtered {
             self.filtered_tasks.clone()
         } else {
             self.tasks.clone()
@@ -853,43 +872,47 @@ impl TuiApp {
             } else {
                 port_info
             };
-            
+
             // Open browser with the URL (macOS)
-            let _ = std::process::Command::new("open")
-                .arg(&url)
-                .spawn();
+            let _ = std::process::Command::new("open").arg(&url).spawn();
         }
     }
 
     /// Show restart/rerun confirmation dialog
     fn show_restart_confirmation(&mut self, task: &Task) {
         use super::{ConfirmationAction, ConfirmationDialog};
-        
+
         // Parse command for display
         let command: Vec<String> = serde_json::from_str(&task.command).unwrap_or_default();
         let command_str = command.join(" ");
-        
+
         // Determine action based on task status
         let action = match task.status {
             crate::app::storage::task_status::TaskStatus::Running => ConfirmationAction::Restart,
             _ => ConfirmationAction::Rerun,
         };
-        
+
         self.confirmation_dialog = Some(ConfirmationDialog {
             action,
             task_id: task.id.clone(),
             task_command: command_str,
             selected_choice: false, // Default to No
         });
-        
+
         self.view_mode = ViewMode::ConfirmationDialog;
     }
 
     /// Handle confirmation dialog key input
     fn handle_confirmation_dialog_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            KeyCode::Char('h') | KeyCode::Left | KeyCode::Char('l') | KeyCode::Right | 
-            KeyCode::Char('j') | KeyCode::Char('k') | KeyCode::Char(' ') | KeyCode::Tab => {
+            KeyCode::Char('h')
+            | KeyCode::Left
+            | KeyCode::Char('l')
+            | KeyCode::Right
+            | KeyCode::Char('j')
+            | KeyCode::Char('k')
+            | KeyCode::Char(' ')
+            | KeyCode::Tab => {
                 if let Some(ref mut dialog) = self.confirmation_dialog {
                     dialog.selected_choice = !dialog.selected_choice; // Toggle
                 }
@@ -916,16 +939,22 @@ impl TuiApp {
     fn execute_restart_or_rerun(&mut self, dialog: ConfirmationDialog) -> Result<()> {
         use crate::app::helpers;
         use std::time::Duration;
-        
+
         // Parse command, cwd, and env from task
         let task = self.get_task_by_id(&dialog.task_id)?;
         let command: Vec<String> = serde_json::from_str(&task.command).unwrap_or_default();
         let cwd = task.cwd.clone();
-        let env = task.env.as_ref()
+        let env = task
+            .env
+            .as_ref()
             .and_then(|e| serde_json::from_str::<std::collections::HashMap<String, String>>(e).ok())
-            .map(|map| map.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>())
+            .map(|map| {
+                map.iter()
+                    .map(|(k, v)| format!("{k}={v}"))
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
-        
+
         match dialog.action {
             super::ConfirmationAction::Restart => {
                 // Kill process and wait for termination (up to 5 seconds)
@@ -933,38 +962,38 @@ impl TuiApp {
                     task.pid,
                     task.pgid,
                     false, // Use SIGTERM first
-                    Duration::from_secs(5)
+                    Duration::from_secs(5),
                 )?;
-                
+
                 if !terminated {
                     // If process didn't terminate, try SIGKILL
                     let _ = helpers::kill_and_wait(
                         task.pid,
                         task.pgid,
                         true, // Force kill
-                        Duration::from_secs(2)
+                        Duration::from_secs(2),
                     );
                 }
-                
+
                 // Update task status in database
                 let conn = crate::app::storage::init_database()?;
                 crate::app::storage::update_task_status(
                     &conn,
                     &dialog.task_id,
                     crate::app::storage::TaskStatus::Killed,
-                    None
+                    None,
                 )?;
-                
+
                 // Start the task again with original working directory and environment
-                let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
+                let cwd_path = cwd.map(std::path::PathBuf::from);
                 match crate::app::commands::spawn(command, cwd_path, env) {
                     Ok(_) => {
                         // Success - the spawn function already verifies the process started
-                    },
+                    }
                     Err(e) => {
                         // Show error to user in a more visible way
-                        eprintln!("❌ Failed to restart task: {}", e);
-                        
+                        eprintln!("❌ Failed to restart task: {e}");
+
                         // Optionally, you could store this error message to display in the UI
                         // For now, we'll just continue so the UI refreshes
                     }
@@ -972,35 +1001,35 @@ impl TuiApp {
             }
             super::ConfirmationAction::Rerun => {
                 // Run the command again with original working directory and environment
-                let cwd_path = cwd.map(|c| std::path::PathBuf::from(c));
+                let cwd_path = cwd.map(std::path::PathBuf::from);
                 match crate::app::commands::spawn(command, cwd_path, env) {
                     Ok(_) => {
                         // Success - the spawn function already verifies the process started
-                    },
+                    }
                     Err(e) => {
                         // Show error to user in a more visible way
-                        eprintln!("❌ Failed to rerun task: {}", e);
-                        
+                        eprintln!("❌ Failed to rerun task: {e}");
+
                         // Optionally, you could store this error message to display in the UI
                         // For now, we'll just continue so the UI refreshes
                     }
                 }
             }
         }
-        
+
         // Refresh task list
         self.refresh_tasks()?;
-        
+
         Ok(())
     }
 
     /// Get task by ID
     fn get_task_by_id(&self, task_id: &str) -> Result<&Task> {
-        self.tasks.iter()
-            .find(|t| t.id == task_id)
-            .ok_or_else(|| crate::app::error::GhostError::TaskNotFound {
+        self.tasks.iter().find(|t| t.id == task_id).ok_or_else(|| {
+            crate::app::error::GhostError::TaskNotFound {
                 task_id: task_id.to_string(),
-            })
+            }
+        })
     }
 
     /// Render confirmation dialog
@@ -1017,7 +1046,7 @@ impl TuiApp {
 
         // Create a centered area for the dialog
         let dialog_area = popup_area(area, 70, 35);
-        
+
         // Clear the dialog area
         frame.render_widget(Clear, dialog_area);
 
@@ -1027,21 +1056,24 @@ impl TuiApp {
                 super::ConfirmationAction::Restart => "Restart",
                 super::ConfirmationAction::Rerun => "Rerun",
             };
-            
-            let title = format!("{} Task", action_text);
-            
+
+            let title = format!("{action_text} Task");
+
             // Create the dialog content
             let command_text = if dialog.task_command.len() > 50 {
                 format!("{}...", &dialog.task_command[..47])
             } else {
                 dialog.task_command.clone()
             };
-            
+
             let content = vec![
                 Line::from(""),
                 Line::from(vec![
                     Span::raw("Are you sure you want to "),
-                    Span::styled(action_text.to_lowercase(), Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        action_text.to_lowercase(),
+                        Style::default().fg(Color::Yellow),
+                    ),
                     Span::raw(" this task?"),
                 ]),
                 Line::from(""),
@@ -1052,20 +1084,20 @@ impl TuiApp {
                 Line::from(""),
                 Line::from(""),
             ];
-            
+
             // Create buttons
             let yes_style = if dialog.selected_choice {
                 Style::default().fg(Color::Black).bg(Color::Green)
             } else {
                 Style::default().fg(Color::Green)
             };
-            
+
             let no_style = if !dialog.selected_choice {
                 Style::default().fg(Color::Black).bg(Color::Red)
             } else {
                 Style::default().fg(Color::Red)
             };
-            
+
             let button_line = Line::from(vec![
                 Span::raw("      "),
                 Span::styled("[ Yes ]", yes_style),
@@ -1073,28 +1105,29 @@ impl TuiApp {
                 Span::styled("[ No ]", no_style),
                 Span::raw("      "),
             ]);
-            
+
             let mut all_content = content;
             all_content.push(button_line);
             all_content.push(Line::from(""));
-            all_content.push(Line::from("h/j/k/l/Space: toggle | Enter: confirm | Esc: cancel"));
-            
+            all_content.push(Line::from(
+                "h/j/k/l/Space: toggle | Enter: confirm | Esc: cancel",
+            ));
+
             // Create the dialog widget
             let dialog_widget = Paragraph::new(all_content)
                 .block(Block::default().borders(Borders::ALL).title(title))
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: true });
-            
+
             frame.render_widget(dialog_widget, dialog_area);
         }
     }
-
 }
 
 /// Create a centered popup area
 fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
     use ratatui::layout::{Constraint, Direction, Layout};
-    
+
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

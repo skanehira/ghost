@@ -35,14 +35,14 @@ pub enum ViewMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SearchType {
-    ProcessName,  // プロセス名での検索
-    LogContent,   // ログ内容での検索
+    ProcessName, // プロセス名での検索
+    LogContent,  // ログ内容での検索
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfirmationAction {
-    Restart,  // 再起動
-    Rerun,    // 再実行
+    Restart, // 再起動
+    Rerun,   // 再実行
 }
 
 #[derive(Debug, Clone)]

@@ -1,11 +1,11 @@
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ghost::app::config::Config;
 use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
 use ghost::app::tui::app::TuiApp;
 use ghost::app::tui::ViewMode;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use tempfile::TempDir;
 use std::fs;
+use tempfile::TempDir;
 
 /// Helper struct to manage test environment with temporary data directory
 struct TestEnvironment {
@@ -84,7 +84,7 @@ fn test_log_auto_scroll_toggle() {
     let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
     app.handle_key(key_enter).unwrap();
     assert_eq!(app.view_mode, ViewMode::LogView);
-    
+
     // Auto-scroll should still be false after entering log view
     assert!(!app.log_auto_scroll);
 
@@ -129,7 +129,7 @@ fn test_auto_scroll_disabled_by_manual_scroll() {
     // Enter log view and enable auto-scroll
     let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
     app.handle_key(key_enter).unwrap();
-    
+
     let key_f = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE);
     app.handle_key(key_f).unwrap();
     assert!(app.log_auto_scroll);
@@ -191,7 +191,7 @@ fn test_auto_scroll_reset_on_exit() {
     // Enter log view and enable auto-scroll
     let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
     app.handle_key(key_enter).unwrap();
-    
+
     let key_f = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE);
     app.handle_key(key_f).unwrap();
     assert!(app.log_auto_scroll);
