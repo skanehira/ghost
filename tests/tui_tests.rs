@@ -542,15 +542,15 @@ fn test_task_filter_cycling_with_tab() {
 
     // Press Tab to cycle to Running
     let key_tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
-    app.handle_key(key_tab.clone()).unwrap();
+    app.handle_key(key_tab).unwrap();
     assert_eq!(app.filter, TaskFilter::Running);
 
     // Press Tab to cycle to Exited
-    app.handle_key(key_tab.clone()).unwrap();
+    app.handle_key(key_tab).unwrap();
     assert_eq!(app.filter, TaskFilter::Exited);
 
     // Press Tab to cycle to Killed
-    app.handle_key(key_tab.clone()).unwrap();
+    app.handle_key(key_tab).unwrap();
     assert_eq!(app.filter, TaskFilter::Killed);
 
     // Press Tab to cycle back to All
@@ -802,13 +802,13 @@ fn test_integrated_navigation_flow() {
 
     // View process details of second task
     let key_enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
-    app.handle_key(key_enter.clone()).unwrap();
+    app.handle_key(key_enter).unwrap();
     assert_eq!(app.view_mode, ViewMode::ProcessDetails);
     assert_eq!(app.selected_task_id, Some("task-2".to_string()));
 
     // Go back to task list
     let key_esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
-    app.handle_key(key_esc.clone()).unwrap();
+    app.handle_key(key_esc).unwrap();
     assert_eq!(app.view_mode, ViewMode::TaskList);
 
     // Navigate back to first task
@@ -822,7 +822,7 @@ fn test_integrated_navigation_flow() {
     assert_eq!(app.view_mode, ViewMode::LogView);
 
     // Go back and view process details
-    app.handle_key(key_esc.clone()).unwrap();
+    app.handle_key(key_esc).unwrap();
     app.handle_key(key_enter).unwrap();
     assert_eq!(app.view_mode, ViewMode::ProcessDetails);
     assert_eq!(app.selected_task_id, Some("task-1".to_string()));
@@ -952,7 +952,7 @@ fn test_log_viewer_with_many_lines() {
 
     let mut log_content = String::new();
     for i in 1..=100 {
-        log_content.push_str(&format!("Line {}: Log message number {}\n", i, i));
+        log_content.push_str(&format!("Line {i}: Log message number {i}\n"));
     }
     std::fs::write(&log_path, log_content).unwrap();
 
