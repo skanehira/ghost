@@ -8,6 +8,7 @@ use ratatui::{
 };
 use tui_scrollview::{ScrollView, ScrollViewState, ScrollbarVisibility};
 
+use crate::app::port_detector::detect_listening_ports;
 use crate::app::storage::task::Task;
 use crate::app::storage::task_status::TaskStatus;
 use chrono::{TimeZone, Utc};
@@ -36,6 +37,7 @@ impl<'a> ProcessDetailsWidget<'a> {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(9), // Basic info section (7 lines + 2 borders)
+                Constraint::Length(5), // Listening ports section
                 Constraint::Min(5),    // Environment variables section
                 Constraint::Length(2), // Footer
             ])
@@ -44,11 +46,14 @@ impl<'a> ProcessDetailsWidget<'a> {
         // Render basic info section
         self.render_basic_info(frame, chunks[0]);
 
+        // Render listening ports section
+        self.render_listening_ports(frame, chunks[1]);
+
         // Render environment variables section
-        self.render_environment_variables(frame, chunks[1], env_scroll_state);
+        self.render_environment_variables(frame, chunks[2], env_scroll_state);
 
         // Render footer
-        self.render_footer(frame, chunks[2]);
+        self.render_footer(frame, chunks[3]);
     }
 
     fn render_basic_info(&self, frame: &mut Frame, area: Rect) {
@@ -136,6 +141,61 @@ impl<'a> ProcessDetailsWidget<'a> {
         ];
 
         let paragraph = Paragraph::new(info_lines)
+            .block(block)
+            .wrap(Wrap { trim: true });
+
+        frame.render_widget(paragraph, area);
+    }
+
+    fn render_listening_ports(&self, frame: &mut Frame, area: Rect) {
+        let block = Block::default()
+            .title(" Listening Ports ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan));
+
+        let port_lines = if self.task.status == TaskStatus::Running {
+            // Get actual listening ports for running processes
+            match detect_listening_ports(self.task.pid) {
+                Ok(ports) => {
+                    if ports.is_empty() {
+                        vec![Line::from(Span::styled(
+                            "Not listening on any ports",
+                            Style::default().fg(Color::DarkGray),
+                        ))]
+                    } else {
+                        ports
+                            .into_iter()
+                            .map(|port| {
+                                Line::from(vec![
+                                    Span::styled(
+                                        format!("{:<6}", port.protocol),
+                                        Style::default().fg(Color::Blue),
+                                    ),
+                                    Span::raw(format!("{:<20}", port.local_addr)),
+                                    Span::styled(
+                                        port.state.clone(),
+                                        Style::default().fg(Color::Green),
+                                    ),
+                                ])
+                            })
+                            .collect()
+                    }
+                }
+                Err(e) => {
+                    vec![Line::from(Span::styled(
+                        format!("Failed to detect ports: {e:?}"),
+                        Style::default().fg(Color::Red),
+                    ))]
+                }
+            }
+        } else {
+            vec![Line::from(Span::styled(
+                "Process not running",
+                Style::default().fg(Color::DarkGray),
+            ))]
+        };
+
+        let paragraph = Paragraph::new(port_lines)
             .block(block)
             .wrap(Wrap { trim: true });
 
