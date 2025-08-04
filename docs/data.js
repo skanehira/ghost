@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1753948825085,
+  "lastUpdate": 1754300219467,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1109,6 +1109,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.20",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "f6e337899b01bbe0714c2803c9384fca08659cf0",
+          "message": "feat: add listening port detection to process details view\n\n- Add port_detector module to detect listening ports using lsof\n- Update process details UI to show listening ports section\n- Add integration tests for port detection functionality\n- Fix linting issues in test files (remove unnecessary clones, fix format args)\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-08-04T16:38:04+09:00",
+          "tree_id": "7324e57acde8447bd59f9d8f637092982efc8415",
+          "url": "https://github.com/skanehira/ghost/commit/f6e337899b01bbe0714c2803c9384fca08659cf0"
+        },
+        "date": 1754300218960,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.03,
+            "range": "± 1.10",
             "unit": "ns/iter"
           }
         ]
