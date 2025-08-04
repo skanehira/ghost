@@ -5,18 +5,32 @@ use std::time::Duration;
 
 #[test]
 fn test_detect_listening_ports_with_server() {
-    // Start a test HTTP server
-    let mut server = Command::new("python3")
-        .args(["-m", "http.server", "0"]) // Use port 0 for random port
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .expect("Failed to start test server");
+    // Compile the TCP server helper
+    let output = Command::new("rustc")
+        .args([
+            "tests/tcp_server_helper.rs",
+            "-o",
+            "target/tcp_server_helper",
+        ])
+        .output()
+        .expect("Failed to compile TCP server helper");
 
-    let server_pid = server.id();
+    if !output.status.success() {
+        panic!(
+            "Failed to compile TCP server helper: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Start the TCP server
+    let mut child = Command::new("target/tcp_server_helper")
+        .spawn()
+        .expect("Failed to start TCP server");
+
+    let server_pid = child.id();
 
     // Give the server time to start
-    thread::sleep(Duration::from_secs(2));
+    thread::sleep(Duration::from_millis(500));
 
     // Test port detection
     let result = detect_listening_ports(server_pid);
@@ -35,8 +49,8 @@ fn test_detect_listening_ports_with_server() {
     assert_eq!(port.state, "LISTEN");
 
     // Clean up
-    let _ = server.kill();
-    let _ = server.wait();
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 #[test]
