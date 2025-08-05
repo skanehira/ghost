@@ -9,17 +9,19 @@ use ratatui::{
 const ID_COLUMN_WIDTH: u16 = 8; // Short ID
 const PID_COLUMN_WIDTH: u16 = 6;
 const STATUS_COLUMN_WIDTH: u16 = 8;
-const PORT_COLUMN_WIDTH: u16 = 12; // Port/URL column
+const DURATION_COLUMN_WIDTH: u16 = 8; // Duration column
+const PORT_COLUMN_WIDTH: u16 = 10; // Port/URL column (reduced to make space for duration)
 const STARTED_COLUMN_WIDTH: u16 = 17;
 const COMMAND_COLUMN_MIN_WIDTH: u16 = 30;
-const DIRECTORY_COLUMN_WIDTH: u16 = 25; // Fixed width for directory (reduced for port column)
+const DIRECTORY_COLUMN_WIDTH: u16 = 23; // Fixed width for directory (reduced for duration column)
 
 // Column constraints for the table
-const COLUMN_CONSTRAINTS: [Constraint; 7] = [
+const COLUMN_CONSTRAINTS: [Constraint; 8] = [
     Constraint::Length(STARTED_COLUMN_WIDTH),
     Constraint::Length(ID_COLUMN_WIDTH),
     Constraint::Length(PID_COLUMN_WIDTH),
     Constraint::Length(STATUS_COLUMN_WIDTH),
+    Constraint::Length(DURATION_COLUMN_WIDTH), // Duration column
     Constraint::Length(PORT_COLUMN_WIDTH), // Port/URL column
     Constraint::Length(DIRECTORY_COLUMN_WIDTH), // Directory is fixed width
     Constraint::Min(COMMAND_COLUMN_MIN_WIDTH), // Command takes remaining space
@@ -173,6 +175,7 @@ impl<'a> TaskListWidget<'a> {
             Cell::from(" ID"),
             Cell::from(" PID"),
             Cell::from(" Status"),
+            Cell::from(" Duration"),
             Cell::from(" Port"),
             Cell::from(" Directory"),
             Cell::from(" Command"),
@@ -249,6 +252,7 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
                     Cell::from(""),
@@ -258,8 +262,10 @@ impl<'a> TaskListWidget<'a> {
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
+                    Cell::from(""),
                 ]),
                 Row::new(vec![
+                    Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
@@ -287,6 +293,7 @@ impl<'a> TaskListWidget<'a> {
                     let timestamp = self.format_timestamp(task.started_at);
                     let command = self.parse_command(&task.command);
                     let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
+                    let duration = task.duration_string();
                     let port_info = if task.status == TaskStatus::Running {
                         crate::app::helpers::extract_web_server_info(task.pid)
                             .unwrap_or_else(|| "-".to_string())
@@ -299,6 +306,7 @@ impl<'a> TaskListWidget<'a> {
                         Cell::from(format!(" {short_id}")), // Show short ID
                         Cell::from(format!(" {pid}")),
                         Cell::from(format!(" {status}")).style(status_style),
+                        Cell::from(format!(" {duration}")),
                         Cell::from(format!(" {port_info}")),
                         Cell::from(format!(" {directory}")),
                         Cell::from(format!(" {command}")),

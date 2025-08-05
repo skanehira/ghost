@@ -120,10 +120,24 @@ pub fn update_task_status(
         Some(crate::app::helpers::now_timestamp())
     };
 
+    // Update database
     conn.execute(
         "UPDATE tasks SET status = ?1, exit_code = ?2, finished_at = ?3 WHERE id = ?4",
         (new_status.as_str(), exit_code, finished_at, task_id),
     )?;
+
+    // If task is finishing, write execution summary to log
+    if finished_at.is_some() {
+        if let Ok(mut task) = get_task(conn, task_id) {
+            task.status = new_status;
+            task.finished_at = finished_at;
+            task.exit_code = exit_code;
+            
+            if let Err(e) = crate::app::process_state::write_execution_summary_to_log(&task) {
+                eprintln!("Failed to write execution summary to log: {e}");
+            }
+        }
+    }
 
     Ok(())
 }

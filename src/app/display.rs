@@ -13,6 +13,7 @@ pub fn print_task_list(tasks: &[Task]) {
     for task in tasks {
         let command_display = format_command_truncated(&task.command, 30);
         let started = format_timestamp(task.started_at, "%Y-%m-%d %H:%M");
+        let duration = task.duration_string();
         let cwd_display = task.cwd.as_deref().unwrap_or("-");
         let port_display = if task.status == TaskStatus::Running {
             extract_port_from_process(task.pid)
@@ -21,10 +22,11 @@ pub fn print_task_list(tasks: &[Task]) {
         };
 
         println!(
-            "{:<36} {:<8} {:<10} {:<20} {:<6} {:<30} {}",
+            "{:<36} {:<8} {:<10} {:<8} {:<20} {:<6} {:<30} {}",
             &task.id,
             task.pid,
             task.status.as_str(),
+            duration,
             started,
             port_display,
             command_display,
@@ -36,10 +38,10 @@ pub fn print_task_list(tasks: &[Task]) {
 /// Print the table header for task list
 fn print_table_header() {
     println!(
-        "{:<36} {:<8} {:<10} {:<20} {:<6} {:<30} Directory",
-        "Task ID", "PID", "Status", "Started", "Port", "Command"
+        "{:<36} {:<8} {:<10} {:<8} {:<20} {:<6} {:<30} Directory",
+        "Task ID", "PID", "Status", "Duration", "Started", "Port", "Command"
     );
-    println!("{}", "-".repeat(140));
+    println!("{}", "-".repeat(148));
 }
 
 /// Display detailed information about a single task
@@ -68,6 +70,9 @@ pub fn print_task_details(task: &Task) {
             format_timestamp(finished_at, "%Y-%m-%d %H:%M:%S")
         );
     }
+
+    let duration = task.duration_string();
+    println!("Duration: {duration}");
 
     if let Some(exit_code) = task.exit_code {
         println!("Exit code: {exit_code}");
