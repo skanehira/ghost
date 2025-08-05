@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use rusqlite::{Connection, Result as SqliteResult, Row};
+use chrono;
 
 use super::task::Task;
 use super::task_status::TaskStatus;
@@ -64,20 +65,38 @@ pub fn get_task(conn: &Connection, task_id: &str) -> Result<Task> {
 }
 
 /// Get all tasks, optionally filtered by status
-pub fn get_tasks(conn: &Connection, status_filter: Option<&str>) -> Result<Vec<Task>> {
+pub fn get_tasks(conn: &Connection, status_filter: Option<&str>, show_all: bool) -> Result<Vec<Task>> {
     let base_sql = "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks";
     let order_clause = " ORDER BY started_at DESC";
 
-    let sql = match status_filter {
-        Some(_) => format!("{base_sql} WHERE status = ?1{order_clause}"),
-        None => format!("{base_sql}{order_clause}"),
+    // Build WHERE clause based on filters
+    let (sql, needs_status_param) = if !show_all {
+        // Filter by today's tasks only
+        let today_start = chrono::Local::now()
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp();
+        
+        match status_filter {
+            Some(_) => (format!("{base_sql} WHERE status = ?1 AND started_at >= {today_start}{order_clause}"), true),
+            None => (format!("{base_sql} WHERE started_at >= {today_start}{order_clause}"), false),
+        }
+    } else {
+        // Show all tasks
+        match status_filter {
+            Some(_) => (format!("{base_sql} WHERE status = ?1{order_clause}"), true),
+            None => (format!("{base_sql}{order_clause}"), false),
+        }
     };
 
     let mut stmt = conn.prepare(&sql)?;
 
-    let task_iter = match status_filter {
-        Some(status) => stmt.query_map([status], row_to_task)?,
-        None => stmt.query_map([], row_to_task)?,
+    let task_iter = if needs_status_param {
+        stmt.query_map([status_filter.unwrap()], row_to_task)?
+    } else {
+        stmt.query_map([], row_to_task)?
     };
 
     let mut tasks = Vec::new();
@@ -92,8 +111,9 @@ pub fn get_tasks(conn: &Connection, status_filter: Option<&str>) -> Result<Vec<T
 pub fn get_tasks_with_process_check(
     conn: &Connection,
     status_filter: Option<&str>,
+    show_all: bool,
 ) -> Result<Vec<Task>> {
-    let mut tasks = get_tasks(conn, status_filter)?;
+    let mut tasks = get_tasks(conn, status_filter, show_all)?;
 
     // Update status for running tasks
     for task in &mut tasks {

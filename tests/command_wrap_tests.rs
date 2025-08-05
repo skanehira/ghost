@@ -158,7 +158,7 @@ fn test_process_start_verification() {
     thread::sleep(Duration::from_secs(3));
 
     // Update status and check again
-    let updated_tasks = storage::get_tasks_with_process_check(&conn, None).unwrap();
+    let updated_tasks = storage::get_tasks_with_process_check(&conn, None, true).unwrap();
     if !updated_tasks.is_empty() {
         // Process should have exited by now
         assert_ne!(

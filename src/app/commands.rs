@@ -118,9 +118,9 @@ fn spawn_and_register_process(
 }
 
 /// List all background processes
-pub fn list(status_filter: Option<String>) -> Result<()> {
+pub fn list(status_filter: Option<String>, show_all: bool) -> Result<()> {
     let conn = storage::init_database()?;
-    let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref())?;
+    let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref(), show_all)?;
     display::print_task_list(&tasks);
 
     Ok(())

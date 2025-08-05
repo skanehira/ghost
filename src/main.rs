@@ -36,6 +36,10 @@ enum Commands {
         /// Filter by status (running, exited, killed)
         #[arg(short, long)]
         status: Option<String>,
+
+        /// Show all tasks (default: today only)
+        #[arg(short, long)]
+        all: bool,
     },
 
     /// Show logs for a process
@@ -112,7 +116,7 @@ async fn main() {
 
     let result = match cli.command {
         Some(Commands::Run { command, cwd, env }) => commands::spawn(command, cwd, env),
-        Some(Commands::List { status }) => commands::list(status),
+        Some(Commands::List { status, all }) => commands::list(status, all),
         Some(Commands::Log {
             task_id,
             follow,

@@ -120,7 +120,7 @@ impl TuiApp {
             TaskFilter::Killed => Some("killed"),
         };
 
-        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter)?;
+        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, true)?;
 
         // Update search filter if active
         if self.is_search_filtered || !self.search_query.is_empty() || self.search_type.is_some() {
