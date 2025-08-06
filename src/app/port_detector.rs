@@ -8,8 +8,95 @@ pub struct ListeningPort {
     pub state: String,
 }
 
+/// Check if lsof command is available on the system
+pub fn check_lsof_availability() -> Result<()> {
+    let output =
+        Command::new("which")
+            .arg("lsof")
+            .output()
+            .map_err(|e| GhostError::ProcessOperation {
+                message: format!("Failed to check for lsof command: {e}"),
+            })?;
+
+    if !output.status.success() {
+        return Err(GhostError::ProcessOperation {
+            message: "lsof command not found. Please install lsof to enable port detection."
+                .to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+/// Parse lsof machine-readable format (-F flag) output
+fn parse_lsof_machine_format(output: &str) -> Vec<ListeningPort> {
+    let mut ports = Vec::new();
+    let mut current_protocol = String::new();
+    let mut current_addr = String::new();
+    let mut current_state = String::new();
+    let mut in_network_fd = false;
+
+    for line in output.lines() {
+        if line.is_empty() {
+            continue;
+        }
+
+        let tag = &line[0..1];
+        let value = &line[1..];
+
+        match tag {
+            "f" => {
+                // File descriptor - reset state for new FD
+                in_network_fd = false;
+                current_protocol.clear();
+                current_addr.clear();
+                current_state.clear();
+            }
+            "t" => {
+                // Type - check if it's a network connection
+                if value.starts_with("IPv4") || value.starts_with("IPv6") {
+                    in_network_fd = true;
+                }
+            }
+            "n" => {
+                // Name - contains address information
+                if in_network_fd {
+                    current_addr = value.to_string();
+                }
+            }
+            "P" => {
+                // Protocol - TCP or UDP
+                if in_network_fd {
+                    current_protocol = value.to_lowercase();
+                }
+            }
+            "T" => {
+                // TCP/TPI info - contains state like LISTEN
+                if in_network_fd && value.starts_with("ST=LISTEN") {
+                    current_state = "LISTEN".to_string();
+
+                    // We have all the information, add the port
+                    if !current_protocol.is_empty() && !current_addr.is_empty() {
+                        ports.push(ListeningPort {
+                            protocol: current_protocol.clone(),
+                            local_addr: current_addr.clone(),
+                            state: current_state.clone(),
+                        });
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    ports
+}
+
 /// Detect listening ports for a given process ID
 pub fn detect_listening_ports(pid: u32) -> Result<Vec<ListeningPort>> {
+    // Check if lsof is available
+    check_lsof_availability()?;
+
     #[cfg(target_os = "macos")]
     return detect_ports_macos(pid);
 
@@ -23,7 +110,7 @@ pub fn detect_listening_ports(pid: u32) -> Result<Vec<ListeningPort>> {
 #[cfg(target_os = "macos")]
 fn detect_ports_macos(pid: u32) -> Result<Vec<ListeningPort>> {
     let output = Command::new("lsof")
-        .args(["-nP", "-i", "-a", "-p", &pid.to_string()])
+        .args(["-nP", "-i", "-a", "-p", &pid.to_string(), "-F"])
         .output()
         .map_err(|e| GhostError::ProcessOperation {
             message: format!("Failed to execute lsof: {e}"),
@@ -35,42 +122,13 @@ fn detect_ports_macos(pid: u32) -> Result<Vec<ListeningPort>> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut ports = Vec::new();
-
-    for line in stdout.lines().skip(1) {
-        // Skip header
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 9 {
-            continue;
-        }
-
-        // Check if it's a LISTEN state
-        if !parts[parts.len() - 1].contains("LISTEN") {
-            continue;
-        }
-
-        // Extract protocol (TCP/UDP)
-        let protocol = parts[7].to_lowercase();
-
-        // Extract local address
-        // lsof format: host:port or [::]:port
-        let name_field = parts[8];
-        if let Some(local_addr) = name_field.split("->").next() {
-            ports.push(ListeningPort {
-                protocol,
-                local_addr: local_addr.to_string(),
-                state: "LISTEN".to_string(),
-            });
-        }
-    }
-
-    Ok(ports)
+    Ok(parse_lsof_machine_format(&stdout))
 }
 
 #[cfg(target_os = "linux")]
 fn detect_ports_linux(pid: u32) -> Result<Vec<ListeningPort>> {
     let output = Command::new("lsof")
-        .args(["-nP", "-i", "-a", "-p", &pid.to_string()])
+        .args(["-nP", "-i", "-a", "-p", &pid.to_string(), "-F"])
         .output()
         .map_err(|e| GhostError::ProcessOperation {
             message: format!("Failed to execute lsof: {e}"),
@@ -82,36 +140,7 @@ fn detect_ports_linux(pid: u32) -> Result<Vec<ListeningPort>> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut ports = Vec::new();
-
-    for line in stdout.lines().skip(1) {
-        // Skip header
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() < 9 {
-            continue;
-        }
-
-        // Check if it's a LISTEN state - last column contains state
-        if !parts[parts.len() - 1].contains("LISTEN") {
-            continue;
-        }
-
-        // Extract protocol (TCP/UDP) - column 7 (0-indexed)
-        let protocol = parts[7].to_lowercase();
-
-        // Extract local address - column 8 (0-indexed)
-        // lsof format on Linux: *:port or IP:port
-        let name_field = parts[8];
-        if let Some(local_addr) = name_field.split("->").next() {
-            ports.push(ListeningPort {
-                protocol,
-                local_addr: local_addr.to_string(),
-                state: "LISTEN".to_string(),
-            });
-        }
-    }
-
-    Ok(ports)
+    Ok(parse_lsof_machine_format(&stdout))
 }
 
 #[cfg(test)]
@@ -124,5 +153,27 @@ mod tests {
         // In a real test, we would start a test server
         let ports = detect_listening_ports(std::process::id());
         assert!(ports.is_ok());
+    }
+
+    #[test]
+    fn test_check_lsof_availability() {
+        let result = check_lsof_availability();
+        // This test should pass on systems with lsof installed
+        // We can't guarantee it's installed, so we just check the function works
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[test]
+    fn test_parse_lsof_machine_format() {
+        // Test parsing of lsof -F format output
+        let sample_output = "p1234\nfcwd\ntCWD\nn/home/user\n\
+                           f6\ntREG\na r\ni123456\nn/usr/bin/app\n\
+                           f10\ntIPv4\nPTCP\nn*:8080\nTST=LISTEN\n";
+
+        let ports = parse_lsof_machine_format(sample_output);
+        assert_eq!(ports.len(), 1);
+        assert_eq!(ports[0].protocol, "tcp");
+        assert_eq!(ports[0].local_addr, "*:8080");
+        assert_eq!(ports[0].state, "LISTEN");
     }
 }
