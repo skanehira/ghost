@@ -62,7 +62,7 @@ fn create_test_tasks() -> Vec<Task> {
             id: "abc12345-6789-1234-5678-123456789abc".to_string(),
             pid: 12345,
             pgid: Some(12345),
-            command: r#"["npm","run","dev"]"#.to_string(),
+            command: r#"["echo","hello"]"#.to_string(),
             env: None,
             cwd: None,
             status: TaskStatus::Running,
@@ -624,7 +624,7 @@ fn test_repeat_command_with_r_key() {
     app.tasks = tasks;
     app.table_scroll.set_total_items(app.tasks.len());
 
-    // Select the first task (index 0) - "npm run dev"
+    // Select the first task (index 0) - "echo hello"
     app.set_selected_index(0);
 
     // Press 'r' key to repeat command

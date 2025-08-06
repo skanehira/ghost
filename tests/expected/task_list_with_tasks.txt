@@ -1,6 +1,6 @@
 ┌ Ghost v0.1.0 [Filter: All] ─────────────────────────────────────────────┐
 │ ID      PID     Status  Starte  Command              Directory          │
-│ abc123  12345   runnin  2024-0  npm run dev          -                  │
+│ abc123  12345   runnin  2024-0  echo hello           -                  │
 │ def678  67890   exited  2024-0  cargo build          -                  │
 │ ghi111  11111   killed  2024-0  python script.py     -                  │
 │                                                                         │
