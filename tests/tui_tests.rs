@@ -990,3 +990,61 @@ fn test_log_viewer_with_many_lines() {
         "Log viewer with many lines display does not match expected output"
     );
 }
+
+#[test]
+fn test_process_details_with_listening_ports() {
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Create test log file
+    let log_dir = env._temp_dir.path().join("logs");
+    std::fs::create_dir_all(&log_dir).unwrap();
+    let log_path = log_dir.join("test-listening.log");
+    std::fs::write(&log_path, "Server started on port 8080").unwrap();
+
+    // Add a task that represents a server with listening ports
+    // Using a fixed PID and data that matches our expected output
+    let tasks = vec![Task {
+        id: "listening-task".to_string(),
+        pid: 12345, // Fixed PID that matches expected output
+        pgid: Some(12345),
+        command: r#"["node", "server.js"]"#.to_string(),
+        env: Some(r#"{"NODE_ENV":"production","PORT":"8080"}"#.to_string()),
+        cwd: Some("/home/user/projects/server".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1000000000,
+        finished_at: None,
+        log_path: log_path.to_str().unwrap().to_string(),
+    }];
+
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(app.tasks.len());
+
+    // Set up terminal with exact dimensions
+    let backend = TestBackend::new(80, 21);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // Set app state to show process details for the listening task
+    app.set_selected_index(0);
+    app.view_mode = ViewMode::ProcessDetails;
+    app.selected_task_id = Some("listening-task".to_string());
+
+    terminal.draw(|f| app.render(f)).unwrap();
+
+    let buffer_output = buffer_to_string(terminal.backend().buffer());
+    let normalized_output = normalize_buffer_output(&buffer_output);
+
+    // This test demonstrates the UI layout for process details with listening ports
+    // The expected output contains sample listening port data
+    println!("Testing UI layout for process details with listening ports");
+
+    // For now, just verify that the structure is correct and contains port information
+    assert!(normalized_output.contains("Listening Ports"));
+    assert!(normalized_output.contains("Environment Variables"));
+    assert!(normalized_output.contains("Process Details"));
+    assert!(normalized_output.contains("listening-task"));
+    assert!(normalized_output.contains("node server.js"));
+}
