@@ -29,8 +29,8 @@ fn test_detect_listening_ports_with_server() {
 
     let server_pid = child.id();
 
-    // Give the server time to start
-    thread::sleep(Duration::from_millis(500));
+    // Give the server more time to start and establish listening state
+    thread::sleep(Duration::from_millis(1000));
 
     // Test port detection
     let result = detect_listening_ports(server_pid);
@@ -39,7 +39,7 @@ fn test_detect_listening_ports_with_server() {
     let ports = result.unwrap();
     assert!(
         !ports.is_empty(),
-        "Should detect at least one listening port"
+        "Should detect at least one listening port for PID {server_pid}"
     );
 
     // Verify port information

@@ -52,6 +52,10 @@ pub enum GhostError {
     #[error("Invalid argument: {message}")]
     InvalidArgument { message: String },
 
+    // Command not found errors
+    #[error("Command not found: {command}")]
+    CommandNotFound { command: String },
+
     // System-level errors
     #[error("Unix system error: {source}")]
     Unix {
