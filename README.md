@@ -43,6 +43,7 @@ This tool was inspired by:
 
 - Unix-based system (Linux, macOS, BSD)
 - Rust 1.80+ (2024 edition)
+- `lsof` command (optional, required for listening port detection)
 
 ### Build from source
 
@@ -86,6 +87,22 @@ just list                   # Show available commands
 ```
 
 The `just install` command runs `cargo install --path .` which builds in release mode and installs to `~/.cargo/bin/` automatically.
+
+### Optional: Install lsof for port detection
+
+Listening-port detection relies on the `lsof` command. Install it if your system does not already provide it:
+
+```bash
+# macOS (usually pre-installed)
+brew install lsof           # If missing
+
+# Linux
+sudo apt-get install lsof   # Debian/Ubuntu
+sudo yum install lsof       # RHEL/CentOS
+sudo pacman -S lsof         # Arch Linux
+```
+
+Ghost works without `lsof`, but the TUI will prompt you to install it if port detection is unavailable.
 
 ## Usage
 
