@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1754320842690,
+  "lastUpdate": 1755132891003,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1169,6 +1169,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.12",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "983311d1f88161a28df673df78332bd55022ddb7",
+          "message": "[BEHAVIORAL] Optimize lsof command checking and improve error messages\n\n- Cache lsof availability check using OnceLock to avoid repeated execution\n- Add CommandNotFound error type for better error categorization\n- Display user-friendly install messages when lsof is not available\n- Show \"lsof command not found\" and \"Please install lsof to enable port detection\" in UI\n- Improve test stability with longer wait time for TCP server startup\n\nPerformance improvements:\n- lsof availability checked only once per application run\n- Reduced system calls for port detection operations\n\nUX improvements:\n- Clear installation instructions when dependencies are missing\n- Color-coded error messages (yellow for warnings, red for errors)\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-08-14T09:52:34+09:00",
+          "tree_id": "e782b4a3e6998111ba56c98ad106f8c3c9f0ba53",
+          "url": "https://github.com/skanehira/ghost/commit/983311d1f88161a28df673df78332bd55022ddb7"
+        },
+        "date": 1755132890685,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.14",
             "unit": "ns/iter"
           }
         ]
