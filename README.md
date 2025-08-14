@@ -19,6 +19,7 @@ Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD
 - **Background Process Execution**: Run commands in the background without a daemon
 - **TUI Mode**: Interactive terminal UI for managing processes
 - **Process Management**: Start, stop, and monitor processes
+- **Port Detection**: Real-time listening port detection for running processes
 - **Log Management**: Automatic log file creation and real-time following
 - **Working Directory Tracking**: See where each command was executed
 - **No Daemon Required**: Simple one-shot execution model
@@ -33,6 +34,7 @@ This tool was inspired by:
 
 - Unix-based system (Linux, macOS, BSD)
 - Rust 1.80+ (2024 edition)
+- `lsof` command (for port detection feature, optional)
 
 ### Build from source
 
@@ -53,6 +55,22 @@ cp target/release/ghost ~/.local/bin/
 # Or to system bin (requires sudo)
 sudo cp target/release/ghost /usr/local/bin/
 ```
+
+### Optional: Install lsof for port detection
+
+For the port detection feature to work, you need `lsof` installed:
+
+```bash
+# macOS (usually pre-installed)
+brew install lsof           # If not available
+
+# Linux
+sudo apt-get install lsof   # Debian/Ubuntu
+sudo yum install lsof       # RHEL/CentOS
+sudo pacman -S lsof         # Arch Linux
+```
+
+Note: Ghost works perfectly without `lsof`, but port detection will show installation instructions in the TUI.
 
 ## Usage
 
@@ -239,17 +257,26 @@ $ ghost list
 **TUI Features:**
 - Real-time process status updates (refreshes every second)
 - Interactive task management
+- Process details view with listening ports
 - Log viewer with line numbers
 - Keyboard navigation
 
 **Task List Keybindings:**
 - `j`/`k`: Move selection up/down
 - `g`/`G`: Jump to top/bottom of list
+- `Enter`: View process details (including listening ports)
 - `l`: View logs for selected task
+- `r`: Rerun selected command
 - `s`: Send SIGTERM to selected task
 - `Ctrl+K`: Send SIGKILL to selected task  
 - `q`: Quit
 - `Tab`: Switch between task filters (All/Running/Exited/Killed)
+
+**Process Details Keybindings:**
+- `j`/`k`: Scroll up/down through environment variables
+- `Ctrl+D`/`Ctrl+U`: Page down/up
+- `q`: Quit application
+- `Esc`: Return to task list
 
 **Log Viewer Keybindings:**
 - `j`/`k`: Scroll up/down
@@ -261,6 +288,7 @@ $ ghost list
 
 - **No Daemon Required**: Each command is self-contained
 - **Process Isolation**: Tasks run as independent processes
+- **Port Detection**: Real-time listening port detection via `lsof`
 - **Log Persistence**: All output is captured and stored
 - **Status Monitoring**: Real-time status updates via process checking
 - **Cross-Platform**: Works on Unix-like systems (Linux, macOS)
