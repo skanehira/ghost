@@ -167,10 +167,24 @@ impl<'a> ProcessDetailsWidget<'a> {
                     }
                 }
                 Err(e) => {
-                    vec![Line::from(Span::styled(
-                        format!("Failed to detect ports: {e:?}"),
-                        Style::default().fg(Color::Red),
-                    ))]
+                    // Check if it's a command not found error
+                    if let crate::app::error::GhostError::CommandNotFound { command } = e {
+                        vec![
+                            Line::from(Span::styled(
+                                format!("{command} command not found"),
+                                Style::default().fg(Color::Yellow),
+                            )),
+                            Line::from(Span::styled(
+                                format!("Please install {command} to enable port detection"),
+                                Style::default().fg(Color::DarkGray),
+                            )),
+                        ]
+                    } else {
+                        vec![Line::from(Span::styled(
+                            format!("Failed to detect ports: {e:?}"),
+                            Style::default().fg(Color::Red),
+                        ))]
+                    }
                 }
             }
         } else {
