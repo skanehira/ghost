@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755305244186,
+  "lastUpdate": 1755305266433,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1229,6 +1229,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.24",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d2b9b44e2fd738f6941914ced5691a157645f52f",
+          "message": "chore(deps): bump serde_json from 1.0.141 to 1.0.142 (#12)\n\nBumps [serde_json](https://github.com/serde-rs/json) from 1.0.141 to 1.0.142.\n- [Release notes](https://github.com/serde-rs/json/releases)\n- [Commits](https://github.com/serde-rs/json/compare/v1.0.141...v1.0.142)\n\n---\nupdated-dependencies:\n- dependency-name: serde_json\n  dependency-version: 1.0.142\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-16T09:46:02+09:00",
+          "tree_id": "f588b6072e037b8f1f226af624306a09fba2339b",
+          "url": "https://github.com/skanehira/ghost/commit/d2b9b44e2fd738f6941914ced5691a157645f52f"
+        },
+        "date": 1755305265868,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.94,
+            "range": "± 0.20",
             "unit": "ns/iter"
           }
         ]
