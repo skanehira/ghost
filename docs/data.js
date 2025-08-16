@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755305266433,
+  "lastUpdate": 1755305280363,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1259,6 +1259,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.94,
             "range": "± 0.20",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "047be3888cd7635fbfbd8a03cee5f2982dcee600",
+          "message": "chore(deps): bump tokio-util from 0.7.15 to 0.7.16 (#13)\n\nBumps [tokio-util](https://github.com/tokio-rs/tokio) from 0.7.15 to 0.7.16.\n- [Release notes](https://github.com/tokio-rs/tokio/releases)\n- [Commits](https://github.com/tokio-rs/tokio/compare/tokio-util-0.7.15...tokio-util-0.7.16)\n\n---\nupdated-dependencies:\n- dependency-name: tokio-util\n  dependency-version: 0.7.16\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-16T09:46:13+09:00",
+          "tree_id": "42249905c6e4e6c0cbd550e17841737281edb7c3",
+          "url": "https://github.com/skanehira/ghost/commit/047be3888cd7635fbfbd8a03cee5f2982dcee600"
+        },
+        "date": 1755305279451,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.94,
+            "range": "± 0.51",
             "unit": "ns/iter"
           }
         ]
