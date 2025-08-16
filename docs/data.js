@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755305280363,
+  "lastUpdate": 1755305289126,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1289,6 +1289,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.94,
             "range": "± 0.51",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d7424f2661a5c5a64812b03be7c3065d90f9419",
+          "message": "chore(deps): bump notify from 8.1.0 to 8.2.0 (#14)\n\nBumps [notify](https://github.com/notify-rs/notify) from 8.1.0 to 8.2.0.\n- [Release notes](https://github.com/notify-rs/notify/releases)\n- [Changelog](https://github.com/notify-rs/notify/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/notify-rs/notify/compare/notify-8.1.0...notify-8.2.0)\n\n---\nupdated-dependencies:\n- dependency-name: notify\n  dependency-version: 8.2.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-16T09:46:26+09:00",
+          "tree_id": "e97005fa14e25b5d4a34c9d73f6c6c5e2bf6b011",
+          "url": "https://github.com/skanehira/ghost/commit/4d7424f2661a5c5a64812b03be7c3065d90f9419"
+        },
+        "date": 1755305288272,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 3.22",
             "unit": "ns/iter"
           }
         ]
