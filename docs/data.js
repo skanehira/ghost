@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755305301640,
+  "lastUpdate": 1755305353588,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1349,6 +1349,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.12",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "07a807aa09cc8f29593be21f0d7a9022e1967902",
+          "message": "chore(deps): bump slab from 0.4.10 to 0.4.11 (#17)\n\nBumps [slab](https://github.com/tokio-rs/slab) from 0.4.10 to 0.4.11.\n- [Release notes](https://github.com/tokio-rs/slab/releases)\n- [Changelog](https://github.com/tokio-rs/slab/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/tokio-rs/slab/compare/v0.4.10...v0.4.11)\n\n---\nupdated-dependencies:\n- dependency-name: slab\n  dependency-version: 0.4.11\n  dependency-type: indirect\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-16T09:47:20+09:00",
+          "tree_id": "8da15bc32162e8ac7b7c205083e63a5003b13e5e",
+          "url": "https://github.com/skanehira/ghost/commit/07a807aa09cc8f29593be21f0d7a9022e1967902"
+        },
+        "date": 1755305353258,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.95,
+            "range": "± 0.23",
             "unit": "ns/iter"
           }
         ]
