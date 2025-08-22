@@ -1,15 +1,15 @@
 ┌ many-lines-test - tail -f app.log ───────────────────────────────────────────┐
-│  1 Line 1: Log message number 1                                              │
-│  2 Line 2: Log message number 2                                              │
-│  3 Line 3: Log message number 3                                              │
-│  4 Line 4: Log message number 4                                              │
-│  5 Line 5: Log message number 5                                              │
-│  6 Line 6: Log message number 6                                              │
-│  7 Line 7: Log message number 7                                              │
-│  8 Line 8: Log message number 8                                              │
-│  9 Line 9: Log message number 9                                              │
-│ 10 Line 10: Log message number 10                                            │
-│ 11 Line 11: Log message number 11                                            │
+│ 91 Line 91: Log message number 91                                            │
+│ 92 Line 92: Log message number 92                                            │
+│ 93 Line 93: Log message number 93                                            │
+│ 94 Line 94: Log message number 94                                            │
+│ 95 Line 95: Log message number 95                                            │
+│ 96 Line 96: Log message number 96                                            │
+│ 97 Line 97: Log message number 97                                            │
+│ 98 Line 98: Log message number 98                                            │
+│ 99 Line 99: Log message number 99                                            │
+│100 Line 100: Log message number 100                                          │
+│                                                                              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  C-d/C-u:Page  Esc:Back  q:Quit  │
+│ j/k:Scroll  h/l:H-Scroll  g/G:Top/Bot  C-d/u:Page  C-f:Auto(ON)  Esc:Back  q │
 └──────────────────────────────────────────────────────────────────────────────┘

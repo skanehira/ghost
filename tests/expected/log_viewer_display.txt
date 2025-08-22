@@ -11,5 +11,5 @@
 │                                                                              │
 │                                                                              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  C-d/C-u:Page  Esc:Back  q:Quit  │
+│ j/k:Scroll  h/l:H-Scroll  g/G:Top/Bot  C-d/u:Page  C-f:Auto(ON)  Esc:Back  q │
 └──────────────────────────────────────────────────────────────────────────────┘

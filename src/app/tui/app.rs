@@ -41,6 +41,7 @@ pub struct TuiApp {
     pub selected_task_id: Option<String>,
     pub env_scroll_state: ScrollViewState,
     pub last_render_area: Rect,
+    pub auto_scroll_enabled: bool,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
     child_processes: HashMap<String, Child>,
@@ -62,6 +63,7 @@ impl TuiApp {
             selected_task_id: None,
             env_scroll_state: ScrollViewState::default(),
             last_render_area: Rect::default(),
+            auto_scroll_enabled: true, // Auto-scroll enabled by default
             conn,
             log_cache: HashMap::new(),
             child_processes: HashMap::new(),
@@ -84,6 +86,7 @@ impl TuiApp {
             selected_task_id: None,
             env_scroll_state: ScrollViewState::default(),
             last_render_area: Rect::default(),
+            auto_scroll_enabled: true, // Auto-scroll enabled by default
             conn,
             log_cache: HashMap::new(),
             child_processes: HashMap::new(),
@@ -195,31 +198,47 @@ impl TuiApp {
                 self.should_quit = true;
             }
             KeyCode::Char('j') => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_down();
             }
             KeyCode::Char('k') => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_up();
             }
             KeyCode::Char('h') => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_left();
             }
             KeyCode::Char('l') => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_right();
             }
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::NONE) => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_to_top();
             }
             KeyCode::Char('G') => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_to_bottom();
             }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_page_down();
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.auto_scroll_enabled = false; // Disable auto-scroll on manual navigation
                 self.log_scroll_state.scroll_page_up();
+            }
+            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Toggle auto-scroll mode with Ctrl+F
+                self.auto_scroll_enabled = !self.auto_scroll_enabled;
+                // If enabling auto-scroll, immediately scroll to bottom
+                if self.auto_scroll_enabled {
+                    self.log_scroll_state.scroll_to_bottom();
+                }
             }
             _ => {}
         }
@@ -331,7 +350,7 @@ impl TuiApp {
                 };
 
                 // Use scrollview widget
-                let scrollview_widget = match update_strategy {
+                let mut scrollview_widget = match update_strategy {
                     UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
                     UpdateStrategy::Incremental(previous_size) => {
                         let cache = self.log_cache.get(log_path).unwrap();
@@ -349,6 +368,13 @@ impl TuiApp {
                         )
                     }
                 };
+
+                // Set auto-scroll state from app
+                if self.auto_scroll_enabled {
+                    scrollview_widget.enable_auto_scroll();
+                } else {
+                    scrollview_widget.disable_auto_scroll();
+                }
 
                 // Update cache if needed
                 if matches!(
@@ -369,7 +395,18 @@ impl TuiApp {
                 }
 
                 // Update line count
-                self.log_lines_count = scrollview_widget.get_lines_count();
+                let new_line_count = scrollview_widget.get_lines_count();
+                let had_new_content = matches!(
+                    update_strategy,
+                    UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+                ) && new_line_count > self.log_lines_count;
+
+                self.log_lines_count = new_line_count;
+
+                // If auto-scroll is enabled and we have new content, scroll to bottom
+                if self.auto_scroll_enabled && had_new_content {
+                    self.log_scroll_state.scroll_to_bottom();
+                }
 
                 // Render with scrollview state
                 frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);

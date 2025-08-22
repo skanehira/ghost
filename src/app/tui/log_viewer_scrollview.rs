@@ -14,10 +14,12 @@ use crate::app::storage::task::Task;
 const MAX_LINES_IN_MEMORY: usize = 10_000;
 
 /// A log viewer widget using tui-scrollview for efficient scrolling
+#[derive(Clone)]
 pub struct LogViewerScrollWidget {
     lines: Vec<String>,
     task_id: String,
     command: String,
+    auto_scroll_enabled: bool,
 }
 
 impl LogViewerScrollWidget {
@@ -28,6 +30,7 @@ impl LogViewerScrollWidget {
             lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            auto_scroll_enabled: true, // Auto-scroll is enabled by default
         }
     }
 
@@ -37,6 +40,7 @@ impl LogViewerScrollWidget {
             lines: cached_lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            auto_scroll_enabled: true, // Auto-scroll is enabled by default
         }
     }
 
@@ -72,6 +76,7 @@ impl LogViewerScrollWidget {
             lines: existing_lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
+            auto_scroll_enabled: true, // Auto-scroll is enabled by default
         }
     }
 
@@ -102,6 +107,26 @@ impl LogViewerScrollWidget {
         self.lines.len()
     }
 
+    /// Check if auto-scroll is enabled
+    pub fn is_auto_scroll_enabled(&self) -> bool {
+        self.auto_scroll_enabled
+    }
+
+    /// Toggle auto-scroll mode
+    pub fn toggle_auto_scroll(&mut self) {
+        self.auto_scroll_enabled = !self.auto_scroll_enabled;
+    }
+
+    /// Disable auto-scroll (called when user manually scrolls)
+    pub fn disable_auto_scroll(&mut self) {
+        self.auto_scroll_enabled = false;
+    }
+
+    /// Enable auto-scroll
+    pub fn enable_auto_scroll(&mut self) {
+        self.auto_scroll_enabled = true;
+    }
+
     /// Parse command from JSON format to readable string
     fn parse_command(command_json: &str) -> String {
         // Try to parse the JSON array format like ["npm","run","dev"]
@@ -115,8 +140,14 @@ impl LogViewerScrollWidget {
 
     /// Create footer widget
     fn create_footer(&self) -> Paragraph {
-        let keybinds =
-            " j/k:Scroll  h/l:Horizontal  gg/G:Top/Bottom  C-d/C-u:Page  Esc:Back  q:Quit ";
+        let auto_scroll_status = if self.auto_scroll_enabled {
+            "ON"
+        } else {
+            "OFF"
+        };
+        let keybinds = format!(
+            " j/k:Scroll  h/l:H-Scroll  g/G:Top/Bot  C-d/u:Page  C-f:Auto({auto_scroll_status})  Esc:Back  q "
+        );
 
         Paragraph::new(keybinds).block(
             Block::default()
@@ -282,8 +313,8 @@ mod tests {
 
         // Check footer
         assert!(content.contains("j/k:Scroll"));
-        assert!(content.contains("h/l:Horizontal"));
-        assert!(content.contains("gg/G:Top/Bottom"));
+        assert!(content.contains("h/l:H-Scroll"));
+        assert!(content.contains("g/G:Top/Bot"));
 
         // Check content with line numbers (dynamic width)
         assert!(content.contains("1 Line 1"));
@@ -378,5 +409,122 @@ mod tests {
             }
         }
         result
+    }
+
+    #[test]
+    fn test_auto_scroll_disabled_by_default() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "Line 1").unwrap();
+        temp_file.flush().unwrap();
+
+        let task = create_test_task(temp_file.path().to_string_lossy().to_string());
+        let widget = LogViewerScrollWidget::new(&task);
+
+        // Auto-scroll should be enabled by default
+        assert!(widget.is_auto_scroll_enabled());
+    }
+
+    #[test]
+    fn test_auto_scroll_toggle() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "Line 1").unwrap();
+        temp_file.flush().unwrap();
+
+        let task = create_test_task(temp_file.path().to_string_lossy().to_string());
+        let mut widget = LogViewerScrollWidget::new(&task);
+
+        // Initially enabled
+        assert!(widget.is_auto_scroll_enabled());
+
+        // Toggle off
+        widget.toggle_auto_scroll();
+        assert!(!widget.is_auto_scroll_enabled());
+
+        // Toggle back on
+        widget.toggle_auto_scroll();
+        assert!(widget.is_auto_scroll_enabled());
+    }
+
+    #[test]
+    fn test_auto_scroll_disable() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "Line 1").unwrap();
+        temp_file.flush().unwrap();
+
+        let task = create_test_task(temp_file.path().to_string_lossy().to_string());
+        let mut widget = LogViewerScrollWidget::new(&task);
+
+        // Initially enabled
+        assert!(widget.is_auto_scroll_enabled());
+
+        // Disable auto-scroll
+        widget.disable_auto_scroll();
+        assert!(!widget.is_auto_scroll_enabled());
+    }
+
+    #[test]
+    fn test_auto_scroll_enable() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "Line 1").unwrap();
+        temp_file.flush().unwrap();
+
+        let task = create_test_task(temp_file.path().to_string_lossy().to_string());
+        let mut widget = LogViewerScrollWidget::new(&task);
+
+        // Disable first
+        widget.disable_auto_scroll();
+        assert!(!widget.is_auto_scroll_enabled());
+
+        // Re-enable auto-scroll
+        widget.enable_auto_scroll();
+        assert!(widget.is_auto_scroll_enabled());
+    }
+
+    #[test]
+    fn test_footer_displays_auto_scroll_status() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "Line 1").unwrap();
+        temp_file.flush().unwrap();
+
+        let task = create_test_task(temp_file.path().to_string_lossy().to_string());
+        let mut widget = LogViewerScrollWidget::new(&task);
+
+        let backend = TestBackend::new(80, 20);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut scroll_state = ScrollViewState::default();
+
+        // Test with auto-scroll enabled (default)
+        terminal
+            .draw(|f| {
+                widget
+                    .clone()
+                    .render(f.area(), f.buffer_mut(), &mut scroll_state);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+
+        // Should show Auto(ON) in footer (default state)
+        assert!(content.contains("C-f:Auto(ON)"));
+
+        // Test with auto-scroll disabled
+        widget.disable_auto_scroll();
+        let backend = TestBackend::new(80, 20);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                widget
+                    .clone()
+                    .render(f.area(), f.buffer_mut(), &mut scroll_state);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+
+        // Should show Auto(OFF) in footer (after disabling)
+        assert!(content.contains("C-f:Auto(OFF)"));
     }
 }
