@@ -394,19 +394,9 @@ impl TuiApp {
                     }
                 }
 
-                // Update line count
+                // Handle auto-scroll update
                 let new_line_count = scrollview_widget.get_lines_count();
-                let had_new_content = matches!(
-                    update_strategy,
-                    UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
-                ) && new_line_count > self.log_lines_count;
-
-                self.log_lines_count = new_line_count;
-
-                // If auto-scroll is enabled and we have new content, scroll to bottom
-                if self.auto_scroll_enabled && had_new_content {
-                    self.log_scroll_state.scroll_to_bottom();
-                }
+                self.handle_auto_scroll_update(&update_strategy, new_line_count);
 
                 // Render with scrollview state
                 frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
@@ -533,6 +523,25 @@ impl TuiApp {
             self.refresh_tasks()?;
         }
         Ok(())
+    }
+
+    /// Handle auto-scroll update based on new content
+    fn handle_auto_scroll_update(
+        &mut self,
+        update_strategy: &UpdateStrategy,
+        new_line_count: usize,
+    ) {
+        let had_new_content = matches!(
+            update_strategy,
+            UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+        ) && new_line_count > self.log_lines_count;
+
+        self.log_lines_count = new_line_count;
+
+        // If auto-scroll is enabled and we have new content, scroll to bottom
+        if self.auto_scroll_enabled && had_new_content {
+            self.log_scroll_state.scroll_to_bottom();
+        }
     }
 
     /// Clean up finished child processes to prevent zombie processes
