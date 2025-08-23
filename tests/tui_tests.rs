@@ -1048,3 +1048,98 @@ fn test_process_details_with_listening_ports() {
     assert!(normalized_output.contains("listening-task"));
     assert!(normalized_output.contains("node server.js"));
 }
+
+#[test]
+fn test_auto_scroll_ctrl_f_toggle() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task with log
+    let tasks = vec![Task {
+        id: "auto-scroll-test".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["tail", "-f", "app.log"]"#.to_string(),
+        env: None,
+        cwd: Some("/tmp".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1000000000,
+        finished_at: None,
+        log_path: "/tmp/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::LogView;
+
+    // Auto-scroll should be enabled by default
+    assert!(app.auto_scroll_enabled);
+
+    // Press Ctrl+F to toggle off
+    let key_ctrl_f = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL);
+    app.handle_key(key_ctrl_f).unwrap();
+    assert!(!app.auto_scroll_enabled);
+
+    // Press Ctrl+F to toggle back on
+    app.handle_key(key_ctrl_f).unwrap();
+    assert!(app.auto_scroll_enabled);
+}
+
+#[test]
+fn test_manual_scrolling_disables_auto_scroll() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ghost::app::tui::app::TuiApp;
+
+    let env = TestEnvironment::new();
+    let mut app = TuiApp::new_with_config(env.config.clone()).unwrap();
+
+    // Add a test task with log
+    let tasks = vec![Task {
+        id: "manual-scroll-test".to_string(),
+        pid: 12345,
+        pgid: Some(12345),
+        command: r#"["echo", "test"]"#.to_string(),
+        env: None,
+        cwd: Some("/tmp".to_string()),
+        status: TaskStatus::Running,
+        exit_code: None,
+        started_at: 1000000000,
+        finished_at: None,
+        log_path: "/tmp/test.log".to_string(),
+    }];
+    app.tasks = tasks;
+    app.table_scroll.set_total_items(1);
+    app.view_mode = ViewMode::LogView;
+
+    // Auto-scroll should be enabled by default
+    assert!(app.auto_scroll_enabled);
+
+    // Test that manual scrolling disables auto-scroll
+    let test_keys = vec![
+        KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE), // scroll down
+        KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE), // scroll up
+        KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE), // scroll left
+        KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE), // scroll right
+        KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE), // go to top
+        KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE), // go to bottom
+        KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL), // page down
+        KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL), // page up
+    ];
+
+    for key in test_keys {
+        // Reset auto-scroll to enabled
+        app.auto_scroll_enabled = true;
+        assert!(app.auto_scroll_enabled);
+
+        // Press the key, which should disable auto-scroll
+        app.handle_key(key).unwrap();
+        assert!(
+            !app.auto_scroll_enabled,
+            "Key {:?} should disable auto-scroll",
+            key
+        );
+    }
+}
