@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755914513562,
+  "lastUpdate": 1755917188664,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1469,6 +1469,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 0.16",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ec10f659bd7828d632f92918e9c6b320edf299dd",
+          "message": "[BEHAVIORAL] Add auto-scroll feature with toggle control for log viewer (#22)\n\n* [BEHAVIORAL] Add auto-scroll feature with toggle control for log viewer\n\nImplement auto-scroll functionality that automatically follows new log entries\nwith the ability to toggle on/off using Ctrl+F. Manual scrolling temporarily\ndisables auto-scroll for better user control.\n\nFeatures:\n- Auto-scroll enabled by default to show latest logs immediately\n- Ctrl+F keybinding to toggle auto-scroll on/off\n- Manual scrolling (j/k/h/l/g/G/Ctrl+d/u) disables auto-scroll\n- Visual indicator in footer shows current auto-scroll status\n- Scrolls to bottom when auto-scroll is enabled with existing logs\n\nImplementation:\n- Add auto_scroll_enabled state to TuiApp\n- Add auto-scroll control methods to LogViewerScrollWidget\n- Update key handlers to manage auto-scroll state\n- Add comprehensive test coverage for toggle and manual scroll behavior\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n* [STRUCTURAL] Extract auto-scroll logic into helper method\n\nRefactor auto-scroll update logic into a dedicated helper method\n`handle_auto_scroll_update()` to improve code readability and\nmaintainability as suggested by Copilot review.\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-08-23T11:44:50+09:00",
+          "tree_id": "c404c75ea1e6a47f70636efe3471888429fc5fba",
+          "url": "https://github.com/skanehira/ghost/commit/ec10f659bd7828d632f92918e9c6b320edf299dd"
+        },
+        "date": 1755917188186,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 1.13",
             "unit": "ns/iter"
           }
         ]
