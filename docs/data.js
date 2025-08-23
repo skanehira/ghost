@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755305353588,
+  "lastUpdate": 1755914449700,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1379,6 +1379,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 0.23",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a874c165a86d1541281fbf508028eb3e57e6dc0",
+          "message": "chore(deps): bump clap from 4.5.43 to 4.5.45 (#18)\n\nBumps [clap](https://github.com/clap-rs/clap) from 4.5.43 to 4.5.45.\n- [Release notes](https://github.com/clap-rs/clap/releases)\n- [Changelog](https://github.com/clap-rs/clap/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/clap-rs/clap/compare/clap_complete-v4.5.43...clap_complete-v4.5.45)\n\n---\nupdated-dependencies:\n- dependency-name: clap\n  dependency-version: 4.5.45\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-23T10:59:05+09:00",
+          "tree_id": "7196aa69e118f804c65cd7988718c3e0f89d504b",
+          "url": "https://github.com/skanehira/ghost/commit/0a874c165a86d1541281fbf508028eb3e57e6dc0"
+        },
+        "date": 1755914449208,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.29",
             "unit": "ns/iter"
           }
         ]
