@@ -42,6 +42,8 @@ pub struct TuiApp {
     pub last_render_area: Rect,
     conn: Connection,
     log_cache: HashMap<String, LogCache>,
+    // Cache for web server port info keyed by PID to avoid expensive lookups in render
+    pub port_cache: HashMap<u32, String>,
     pub search_query: String,
     pub previous_view_mode: ViewMode,    // 検索モードから戻るため
     pub filtered_tasks: Vec<Task>,       // フィルタリング済みタスク
@@ -71,6 +73,7 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            port_cache: HashMap::new(),
             search_query: String::new(),
             previous_view_mode: ViewMode::TaskList,
             filtered_tasks: Vec::new(),
@@ -101,6 +104,7 @@ impl TuiApp {
             last_render_area: Rect::default(),
             conn,
             log_cache: HashMap::new(),
+            port_cache: HashMap::new(),
             search_query: String::new(),
             previous_view_mode: ViewMode::TaskList,
             filtered_tasks: Vec::new(),
@@ -123,6 +127,30 @@ impl TuiApp {
         };
 
         self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, true)?;
+
+        // Update (throttled) port cache for running tasks only to avoid heavy work in render.
+        // Strategy: populate cache entries for any running PID missing in cache; remove stale PIDs.
+        // We intentionally avoid refreshing existing entries every tick to reduce lsof/ps calls.
+        use std::collections::HashSet;
+        let current_running_pids: HashSet<u32> = self
+            .tasks
+            .iter()
+            .filter(|t| t.status == crate::app::storage::task_status::TaskStatus::Running)
+            .map(|t| t.pid)
+            .collect();
+
+        // Remove cache entries for PIDs that are no longer in the list
+        self.port_cache
+            .retain(|pid, _| current_running_pids.contains(pid));
+
+        // Fill cache for missing PIDs only (one-shot; avoids blocking keystrokes)
+        for pid in current_running_pids {
+            if !self.port_cache.contains_key(&pid) {
+                let port = crate::app::helpers::extract_web_server_info(pid)
+                    .unwrap_or_else(|| "-".to_string());
+                self.port_cache.insert(pid, port);
+            }
+        }
 
         // Update search filter if active
         if self.is_search_filtered || !self.search_query.is_empty() || self.search_type.is_some() {
@@ -546,10 +574,11 @@ impl TuiApp {
                 display_tasks,
                 &self.filter,
                 &mut self.table_scroll,
+                &self.port_cache,
                 self.search_query.clone(),
             )
         } else {
-            TaskListWidget::new(display_tasks, &self.filter, &mut self.table_scroll)
+            TaskListWidget::new(display_tasks, &self.filter, &mut self.table_scroll, &self.port_cache)
         };
         frame.render_widget(widget, area);
     }
@@ -576,6 +605,7 @@ impl TuiApp {
             display_tasks,
             &self.filter,
             &mut self.table_scroll,
+            &self.port_cache,
             self.search_query.clone(),
         );
         frame.render_widget(widget, chunks[0]);
