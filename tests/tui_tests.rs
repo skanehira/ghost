@@ -528,8 +528,8 @@ fn test_task_filter_cycling_with_tab() {
     app.tasks = tasks;
     app.table_scroll.set_total_items(3);
 
-    // Test initial filter is All
-    assert_eq!(app.filter, TaskFilter::All);
+    // Test initial filter is Running
+    assert_eq!(app.filter, TaskFilter::Running);
 
     // Press Tab to cycle to Running
     let key_tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);

@@ -59,7 +59,8 @@ impl TuiApp {
         Ok(Self {
             tasks: Vec::new(),
             table_scroll: TableScroll::new(),
-            filter: TaskFilter::All,
+            // Default to showing only running tasks
+            filter: TaskFilter::Running,
             should_quit: false,
             view_mode: ViewMode::TaskList,
             log_scroll_offset: 0,
@@ -88,7 +89,8 @@ impl TuiApp {
         Ok(Self {
             tasks: Vec::new(),
             table_scroll: TableScroll::new(),
-            filter: TaskFilter::All,
+            // Default to showing only running tasks
+            filter: TaskFilter::Running,
             should_quit: false,
             view_mode: ViewMode::TaskList,
             log_scroll_offset: 0,
