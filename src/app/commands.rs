@@ -391,7 +391,7 @@ fn format_status_list(statuses: &[storage::TaskStatus]) -> String {
 }
 
 /// Start TUI mode
-pub async fn tui() -> Result<()> {
+pub async fn tui(day_window: Option<u64>) -> Result<()> {
     use crossterm::{
         event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream},
         execute,
@@ -412,7 +412,7 @@ pub async fn tui() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app
-    let mut app = TuiApp::new()?;
+    let mut app = TuiApp::new_with_day_window(day_window)?;
     app.refresh_tasks()?;
 
     // Setup refresh interval and event stream
