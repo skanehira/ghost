@@ -43,6 +43,7 @@ pub fn extract_port_from_process(pid: u32) -> String {
 }
 
 /// Extract port from a single process PID
+#[allow(dead_code)]
 fn extract_port_from_single_process(_pid: u32) -> Option<String> {
     // Backward compatibility wrapper retained (unused by new selection logic)
     None
@@ -73,6 +74,7 @@ pub fn extract_web_server_info(pid: u32) -> Option<String> {
 }
 
 /// Extract port from a single process PID for web server info (returns port number only)
+#[allow(dead_code)]
 fn extract_port_from_single_process_for_web(_pid: u32) -> Option<u16> {
     // Backward compatibility wrapper retained (unused by new selection logic)
     None
