@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1755917188664,
+  "lastUpdate": 1756455295134,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1499,6 +1499,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 1.13",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "01f432d63d14b39d3cb46707f9e7509a01f29565",
+          "message": "chore(deps): bump uuid from 1.17.0 to 1.18.0 (#19)\n\nBumps [uuid](https://github.com/uuid-rs/uuid) from 1.17.0 to 1.18.0.\n- [Release notes](https://github.com/uuid-rs/uuid/releases)\n- [Commits](https://github.com/uuid-rs/uuid/compare/v1.17.0...v1.18.0)\n\n---\nupdated-dependencies:\n- dependency-name: uuid\n  dependency-version: 1.18.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-29T17:13:16+09:00",
+          "tree_id": "6c80c687ef4bd394e8c9e6856feeed1b1e6d2259",
+          "url": "https://github.com/skanehira/ghost/commit/01f432d63d14b39d3cb46707f9e7509a01f29565"
+        },
+        "date": 1756455294527,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.27",
             "unit": "ns/iter"
           }
         ]
