@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1756455327738,
+  "lastUpdate": 1756455375784,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1619,6 +1619,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.01,
             "range": "± 1.36",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9eb2cb3e24070e37247ca3ae3959210d65ba5fed",
+          "message": "chore(deps): bump tempfile from 3.20.0 to 3.21.0 (#26)\n\nBumps [tempfile](https://github.com/Stebalien/tempfile) from 3.20.0 to 3.21.0.\n- [Changelog](https://github.com/Stebalien/tempfile/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/Stebalien/tempfile/commits)\n\n---\nupdated-dependencies:\n- dependency-name: tempfile\n  dependency-version: 3.21.0\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-29T17:13:59+09:00",
+          "tree_id": "8932b944110205ca9da0b325007313d3b93a99ca",
+          "url": "https://github.com/skanehira/ghost/commit/9eb2cb3e24070e37247ca3ae3959210d65ba5fed"
+        },
+        "date": 1756455375428,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.02,
+            "range": "± 0.35",
             "unit": "ns/iter"
           }
         ]
