@@ -42,11 +42,6 @@ pub fn extract_port_from_process(pid: u32) -> String {
     "-".to_string()
 }
 
-/// Extract port from a single process PID
-fn extract_port_from_single_process(_pid: u32) -> Option<String> {
-    // Backward compatibility wrapper retained (unused by new selection logic)
-    None
-}
 
 /// Extract web server info from process ID using lsof (returns :port format for TUI compatibility)
 pub fn extract_web_server_info(pid: u32) -> Option<String> {
@@ -72,11 +67,6 @@ pub fn extract_web_server_info(pid: u32) -> Option<String> {
     candidates.first().map(|(p, _)| format!(":{p}"))
 }
 
-/// Extract port from a single process PID for web server info (returns port number only)
-fn extract_port_from_single_process_for_web(_pid: u32) -> Option<u16> {
-    // Backward compatibility wrapper retained (unused by new selection logic)
-    None
-}
 
 /// Extract port number from lsof output line
 fn extract_port_from_lsof_line(line: &str) -> Option<u16> {
