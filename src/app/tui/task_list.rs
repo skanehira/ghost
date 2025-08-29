@@ -33,8 +33,13 @@ use crate::app::storage::task_status::TaskStatus;
 
 impl App {
     pub fn render_task_list(&mut self, frame: &mut Frame, area: Rect) {
-        let task_list_widget =
-            TaskListWidget::new(self.tasks.clone(), &self.filter, &mut self.table_scroll);
+        let empty_cache: std::collections::HashMap<u32, String> = std::collections::HashMap::new();
+        let task_list_widget = TaskListWidget::new(
+            self.tasks.clone(),
+            &self.filter,
+            &mut self.table_scroll,
+            &empty_cache,
+        );
         frame.render_widget(task_list_widget, area);
     }
 }
@@ -43,6 +48,7 @@ pub struct TaskListWidget<'a> {
     tasks: Vec<Task>,
     filter: &'a TaskFilter,
     table_scroll: &'a mut TableScroll,
+    port_cache: &'a std::collections::HashMap<u32, String>,
     search_query: Option<String>, // 検索クエリ表示用
 }
 
@@ -51,11 +57,13 @@ impl<'a> TaskListWidget<'a> {
         tasks: Vec<Task>,
         filter: &'a TaskFilter,
         table_scroll: &'a mut TableScroll,
+        port_cache: &'a std::collections::HashMap<u32, String>,
     ) -> Self {
         Self {
             tasks,
             filter,
             table_scroll,
+            port_cache,
             search_query: None,
         }
     }
@@ -64,12 +72,14 @@ impl<'a> TaskListWidget<'a> {
         tasks: Vec<Task>,
         filter: &'a TaskFilter,
         table_scroll: &'a mut TableScroll,
+        port_cache: &'a std::collections::HashMap<u32, String>,
         search_query: String,
     ) -> Self {
         Self {
             tasks,
             filter,
             table_scroll,
+            port_cache,
             search_query: Some(search_query),
         }
     }
@@ -295,7 +305,10 @@ impl<'a> TaskListWidget<'a> {
                     let directory = self.format_directory(task.cwd.as_deref().unwrap_or("-"));
                     let duration = task.duration_string();
                     let port_info = if task.status == TaskStatus::Running {
-                        crate::app::helpers::extract_web_server_info(task.pid)
+                        self
+                            .port_cache
+                            .get(&task.pid)
+                            .cloned()
                             .unwrap_or_else(|| "-".to_string())
                     } else {
                         "-".to_string()
