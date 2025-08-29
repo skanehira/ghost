@@ -11,6 +11,10 @@ use ghost::app::commands;
 )]
 #[command(version)]
 struct Cli {
+    /// Show tasks within N days (TUI only). One day = 25 hours.
+    /// Example: `ghost -d 3` => last 75 hours
+    #[arg(short = 'd', long = "day")]
+    day: Option<u64>,
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -133,7 +137,7 @@ async fn main() {
             dry_run,
             all,
         }) => commands::cleanup(days, status, dry_run, all),
-        None => commands::tui().await, // No subcommand = start TUI
+        None => commands::tui(cli.day).await, // No subcommand = start TUI
     };
 
     if let Err(e) = result {

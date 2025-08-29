@@ -111,6 +111,44 @@ pub fn get_tasks_unbounded(conn: &Connection, status_filter: Option<&str>) -> Re
     get_tasks(conn, status_filter, true)
 }
 
+/// Get tasks since a specific timestamp (unix seconds)
+pub fn get_tasks_since(
+    conn: &Connection,
+    status_filter: Option<&str>,
+    since_timestamp: i64,
+) -> Result<Vec<Task>> {
+    let base_sql = "SELECT id, pid, pgid, command, env, cwd, status, exit_code, started_at, finished_at, log_path FROM tasks";
+    let order_clause = " ORDER BY started_at DESC";
+
+    let (sql, needs_status_param) = match status_filter {
+        Some(_) => (
+            format!(
+                "{base_sql} WHERE status = ?1 AND started_at >= {since_timestamp}{order_clause}"
+            ),
+            true,
+        ),
+        None => (
+            format!("{base_sql} WHERE started_at >= {since_timestamp}{order_clause}"),
+            false,
+        ),
+    };
+
+    let mut stmt = conn.prepare(&sql)?;
+
+    let task_iter = if needs_status_param {
+        stmt.query_map([status_filter.unwrap()], row_to_task)?
+    } else {
+        stmt.query_map([], row_to_task)?
+    };
+
+    let mut tasks = Vec::new();
+    for task in task_iter {
+        tasks.push(task?);
+    }
+
+    Ok(tasks)
+}
+
 /// Get all tasks with process status checking
 pub fn get_tasks_with_process_check(
     conn: &Connection,
@@ -118,6 +156,26 @@ pub fn get_tasks_with_process_check(
     show_all: bool,
 ) -> Result<Vec<Task>> {
     let mut tasks = get_tasks(conn, status_filter, show_all)?;
+
+    // Update status for running tasks
+    for task in &mut tasks {
+        if task.status == TaskStatus::Running {
+            if let Ok(updated_task) = update_task_status_by_process_check(conn, &task.id) {
+                *task = updated_task;
+            }
+        }
+    }
+
+    Ok(tasks)
+}
+
+/// Get tasks since a timestamp with process status checking
+pub fn get_tasks_with_process_check_since(
+    conn: &Connection,
+    status_filter: Option<&str>,
+    since_timestamp: i64,
+) -> Result<Vec<Task>> {
+    let mut tasks = get_tasks_since(conn, status_filter, since_timestamp)?;
 
     // Update status for running tasks
     for task in &mut tasks {

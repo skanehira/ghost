@@ -52,6 +52,8 @@ pub struct TuiApp {
     pub search_type: Option<SearchType>, // 検索のタイプ
     pub confirmation_dialog: Option<ConfirmationDialog>, // 確認ダイアログの状態
     pub log_auto_scroll: bool,           // ログの自動スクロール機能（tail -f モード）
+    // 非Runningフィルタ用の表示期間（時間）。Noneの場合は既定(24h)を使う
+    non_running_window_hours: u64,
 }
 
 impl TuiApp {
@@ -82,6 +84,7 @@ impl TuiApp {
             search_type: None,
             confirmation_dialog: None,
             log_auto_scroll: false,
+            non_running_window_hours: 24,
         })
     }
 
@@ -113,7 +116,18 @@ impl TuiApp {
             search_type: None,
             confirmation_dialog: None,
             log_auto_scroll: false,
+            non_running_window_hours: 24,
         })
+    }
+
+    /// Create with custom day window (days * 25h) for non-running filters
+    pub fn new_with_day_window(day_window: Option<u64>) -> Result<Self> {
+        let mut app = Self::new()?;
+        if let Some(d) = day_window {
+            // 1日=25時間指定
+            app.non_running_window_hours = d.saturating_mul(25);
+        }
+        Ok(app)
     }
 
     /// Load tasks from database
@@ -126,9 +140,21 @@ impl TuiApp {
             TaskFilter::Killed => Some("killed"),
         };
 
-        // Use unlimited history for Running, limit to last 24h for others
-        let show_all = matches!(self.filter, TaskFilter::Running);
-        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, show_all)?;
+        // Running は全期間。他は指定ウィンドウ(既定24h、または -d 指定の25h×日数)
+        if matches!(self.filter, TaskFilter::Running) {
+            self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, true)?;
+        } else {
+            // 現在時刻からウィンドウ分を差し引いた閾値を計算
+            let since = chrono::Utc::now()
+                .checked_sub_signed(chrono::Duration::hours(self.non_running_window_hours as i64))
+                .unwrap()
+                .timestamp();
+            self.tasks = task_repository::get_tasks_with_process_check_since(
+                &self.conn,
+                status_filter,
+                since,
+            )?;
+        }
 
         // Update (throttled) port cache for running tasks only to avoid heavy work in render.
         // Strategy: populate cache entries for any running PID missing in cache; remove stale PIDs.
