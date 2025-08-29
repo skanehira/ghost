@@ -126,7 +126,9 @@ impl TuiApp {
             TaskFilter::Killed => Some("killed"),
         };
 
-        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, true)?;
+        // Use unlimited history for Running, limit to last 24h for others
+        let show_all = matches!(self.filter, TaskFilter::Running);
+        self.tasks = task_repository::get_tasks_with_process_check(&self.conn, status_filter, show_all)?;
 
         // Update (throttled) port cache for running tasks only to avoid heavy work in render.
         // Strategy: populate cache entries for any running PID missing in cache; remove stale PIDs.

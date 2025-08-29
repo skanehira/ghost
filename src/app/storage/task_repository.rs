@@ -71,17 +71,15 @@ pub fn get_tasks(conn: &Connection, status_filter: Option<&str>, show_all: bool)
 
     // Build WHERE clause based on filters
     let (sql, needs_status_param) = if !show_all {
-        // Filter by today's tasks only
-        let today_start = chrono::Local::now()
-            .date_naive()
-            .and_hms_opt(0, 0, 0)
+        // Filter by last 24 hours
+        let since_24h = chrono::Utc::now()
+            .checked_sub_signed(chrono::Duration::hours(24))
             .unwrap()
-            .and_utc()
             .timestamp();
-        
+
         match status_filter {
-            Some(_) => (format!("{base_sql} WHERE status = ?1 AND started_at >= {today_start}{order_clause}"), true),
-            None => (format!("{base_sql} WHERE started_at >= {today_start}{order_clause}"), false),
+            Some(_) => (format!("{base_sql} WHERE status = ?1 AND started_at >= {since_24h}{order_clause}"), true),
+            None => (format!("{base_sql} WHERE started_at >= {since_24h}{order_clause}"), false),
         }
     } else {
         // Show all tasks
@@ -105,6 +103,12 @@ pub fn get_tasks(conn: &Connection, status_filter: Option<&str>, show_all: bool)
     }
 
     Ok(tasks)
+}
+
+/// Backward-compatible helper: get all tasks (no time limit)
+/// Used by tests and legacy call sites expecting 2-arg signature.
+pub fn get_tasks_unbounded(conn: &Connection, status_filter: Option<&str>) -> Result<Vec<Task>> {
+    get_tasks(conn, status_filter, true)
 }
 
 /// Get all tasks with process status checking

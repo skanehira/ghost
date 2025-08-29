@@ -37,7 +37,7 @@ enum Commands {
         #[arg(short, long)]
         status: Option<String>,
 
-        /// Show all tasks (default: today only)
+        /// Show all tasks (default: last 24 hours)
         #[arg(short, long)]
         all: bool,
     },
