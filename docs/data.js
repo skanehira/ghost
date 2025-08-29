@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1756455295134,
+  "lastUpdate": 1756455304748,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1529,6 +1529,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.27",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "379a62802e899be2f38f289daa1031adfd0700e2",
+          "message": "chore(deps): bump regex from 1.11.1 to 1.11.2 (#23)\n\nBumps [regex](https://github.com/rust-lang/regex) from 1.11.1 to 1.11.2.\n- [Release notes](https://github.com/rust-lang/regex/releases)\n- [Changelog](https://github.com/rust-lang/regex/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/rust-lang/regex/compare/1.11.1...1.11.2)\n\n---\nupdated-dependencies:\n- dependency-name: regex\n  dependency-version: 1.11.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-08-29T17:13:24+09:00",
+          "tree_id": "aa502a10ecb091546f38c645138b9ca179d521f7",
+          "url": "https://github.com/skanehira/ghost/commit/379a62802e899be2f38f289daa1031adfd0700e2"
+        },
+        "date": 1756455303809,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.24",
             "unit": "ns/iter"
           }
         ]
