@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1756455375784,
+  "lastUpdate": 1756816017606,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1649,6 +1649,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.02,
             "range": "± 0.35",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "a0b5d858b5a4bc4f58ed9064ce75d1e84feb0111",
+          "message": "[BEHAVIORAL] Add log file path display to process details view\n\nAdd log file path information to the process details screen for better\nvisibility of where process logs are stored.\n\nFeatures:\n- Display log file path in basic process information section\n- Adjust layout constraints to accommodate the new field\n- Maintain consistent formatting with existing information fields\n\nImplementation:\n- Add Log File field to ProcessDetailsWidget render_basic_info method\n- Update layout height from 7 to 8 lines to fit new information\n- Update test expectations to match new display format\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+          "timestamp": "2025-09-02T21:24:57+09:00",
+          "tree_id": "216a70a3bf81a542d60f86ff49537e0a83975763",
+          "url": "https://github.com/skanehira/ghost/commit/a0b5d858b5a4bc4f58ed9064ce75d1e84feb0111"
+        },
+        "date": 1756816017230,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.01,
+            "range": "± 0.22",
             "unit": "ns/iter"
           }
         ]
