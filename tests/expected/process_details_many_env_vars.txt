@@ -4,6 +4,7 @@
 │Status: running (13286h 37m 4s)                                               │
 │PID: 12345 | PGID: 12345                                                      │
 │Directory: /home/user/projects/myapp                                          │
+│Log File: /tmp/ghost/logs/test.log                                            │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Listening Ports ─────────────────────────────────────────────────────────────┐
 │Not listening on any ports                                                    │
@@ -14,7 +15,6 @@
 │NODE_ENV=development                                                          │
 │PORT=3000                                                                     │
 │DATABASE_URL=postgresql://localhost:5432/mydb                                 │
-│API_KEY=secret123                                                             │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │          [q] Quit  [Esc] Back to list  [j/k] Scroll  [C-d/C-u] Page          │
 └──────────────────────────────────────────────────────────────────────────────┘

@@ -1,10 +1,10 @@
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect, Size},
     style::{Color, Modifier, Style},
     symbols,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
+    Frame,
 };
 use tui_scrollview::{ScrollView, ScrollViewState, ScrollbarVisibility};
 
@@ -36,7 +36,7 @@ impl<'a> ProcessDetailsWidget<'a> {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(7), // Basic info section (5 lines + 2 borders)
+                Constraint::Length(8), // Basic info section (6 lines + 2 borders)
                 Constraint::Length(5), // Listening ports section
                 Constraint::Min(5),    // Environment variables section
                 Constraint::Length(2), // Footer
@@ -122,6 +122,10 @@ impl<'a> ProcessDetailsWidget<'a> {
             Line::from(vec![
                 Span::styled("Directory: ", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(self.task.cwd.as_deref().unwrap_or("N/A")),
+            ]),
+            Line::from(vec![
+                Span::styled("Log File: ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(&self.task.log_path),
             ]),
         ];
 
