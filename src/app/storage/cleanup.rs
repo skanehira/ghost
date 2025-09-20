@@ -98,13 +98,13 @@ pub fn cleanup_tasks_by_criteria(
 
     // Delete log files first
     for task in &tasks_to_delete {
-        if std::path::Path::new(&task.log_path).exists() {
-            if let Err(e) = std::fs::remove_file(&task.log_path) {
-                eprintln!(
-                    "Warning: Failed to delete log file {}: {}",
-                    task.log_path, e
-                );
-            }
+        if std::path::Path::new(&task.log_path).exists()
+            && let Err(e) = std::fs::remove_file(&task.log_path)
+        {
+            eprintln!(
+                "Warning: Failed to delete log file {}: {}",
+                task.log_path, e
+            );
         }
     }
 

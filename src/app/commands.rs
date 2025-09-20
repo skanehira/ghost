@@ -4,18 +4,26 @@ use crate::app::{config, display, error, error::Result, helpers, process, storag
 use rusqlite::Connection;
 
 /// Run a command in the background
-pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
+pub fn spawn(
+    conn: &Connection,
+    command: Vec<String>,
+    cwd: Option<PathBuf>,
+    env: Vec<String>,
+    show_output: bool,
+) -> Result<process::ProcessInfo> {
     if command.is_empty() {
         return Err(error::GhostError::InvalidArgument {
             message: "No command specified".to_string(),
         });
     }
     let env_vars = config::env::parse_env_vars(&env)?;
-    let conn = storage::init_database()?;
-    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, &conn)?;
-    display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
+    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, conn)?;
 
-    Ok(())
+    if show_output {
+        display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
+    }
+
+    Ok(process_info)
 }
 
 /// Spawn process and register it in the database
@@ -59,39 +67,50 @@ pub fn spawn_and_register_process(
 }
 
 /// List all background processes
-pub fn list(status_filter: Option<String>) -> Result<()> {
-    let conn = storage::init_database()?;
-    let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref())?;
-    display::print_task_list(&tasks);
+pub fn list(
+    conn: &Connection,
+    status_filter: Option<String>,
+    show_output: bool,
+) -> Result<Vec<storage::task::Task>> {
+    let tasks = storage::get_tasks_with_process_check(conn, status_filter.as_deref())?;
 
-    Ok(())
+    if show_output {
+        display::print_task_list(&tasks);
+    }
+
+    Ok(tasks)
 }
 
 /// Show logs for a process
-pub async fn log(task_id: &str, follow: bool) -> Result<()> {
-    let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
-
+pub async fn log(
+    conn: &Connection,
+    task_id: &str,
+    follow: bool,
+    show_output: bool,
+) -> Result<String> {
+    let task = storage::get_task(conn, task_id)?;
     let log_path = PathBuf::from(&task.log_path);
+
     let content =
         std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
             message: format!("Failed to read log file: {e}"),
         })?;
 
-    if follow {
-        display::print_log_follow_header(task_id, &task.log_path);
-        helpers::follow_log_file(&log_path).await?;
-    } else {
-        print!("{content}");
+    if show_output {
+        if follow {
+            display::print_log_follow_header(task_id, &task.log_path);
+            helpers::follow_log_file(&log_path).await?;
+        } else {
+            print!("{content}");
+        }
     }
 
-    Ok(())
+    Ok(content)
 }
 
 /// Stop a background process
-pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
-    let conn = storage::init_database()?;
-    let task = storage::get_task(&conn, task_id)?;
+pub fn stop(conn: &Connection, task_id: &str, force: bool, show_output: bool) -> Result<()> {
+    let task = storage::get_task(conn, task_id)?;
 
     helpers::validate_task_running(&task)?;
 
@@ -108,7 +127,7 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     } else {
         storage::TaskStatus::Exited
     };
-    storage::update_task_status(&conn, task_id, status, None)?;
+    storage::update_task_status(conn, task_id, status, None)?;
 
     if show_output {
         let pid = task.pid;
@@ -119,20 +138,25 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
 }
 
 /// Check status of a background process
-pub fn status(task_id: &str) -> Result<()> {
-    let conn = storage::init_database()?;
-
+pub fn status(conn: &Connection, task_id: &str, show_output: bool) -> Result<storage::task::Task> {
     // This will update the status if the process is no longer running
-    let task = storage::update_task_status_by_process_check(&conn, task_id)?;
-    display::print_task_details(&task);
+    let task = storage::update_task_status_by_process_check(conn, task_id)?;
 
-    Ok(())
+    if show_output {
+        display::print_task_details(&task);
+    }
+
+    Ok(task)
 }
 
 /// Clean up old finished tasks
-pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> Result<()> {
-    let conn = storage::init_database()?;
-
+pub fn cleanup(
+    conn: &Connection,
+    days: u64,
+    status: Option<String>,
+    dry_run: bool,
+    all: bool,
+) -> Result<()> {
     // Parse status filter
     let status_filter = parse_status_filter(status.as_deref())?;
 
@@ -141,7 +165,7 @@ pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> R
 
     if dry_run {
         // Show what would be deleted
-        let candidates = storage::get_cleanup_candidates(&conn, days_filter, &status_filter)?;
+        let candidates = storage::get_cleanup_candidates(conn, days_filter, &status_filter)?;
 
         if candidates.is_empty() {
             println!("No tasks found matching cleanup criteria.");
@@ -163,7 +187,7 @@ pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> R
         }
     } else {
         // Actually delete tasks
-        let deleted_count = storage::cleanup_tasks_by_criteria(&conn, days_filter, &status_filter)?;
+        let deleted_count = storage::cleanup_tasks_by_criteria(conn, days_filter, &status_filter)?;
 
         if deleted_count == 0 {
             println!("No tasks found matching cleanup criteria.");

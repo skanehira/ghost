@@ -97,10 +97,10 @@ pub fn get_tasks_with_process_check(
 
     // Update status for running tasks
     for task in &mut tasks {
-        if task.status == TaskStatus::Running {
-            if let Ok(updated_task) = update_task_status_by_process_check(conn, &task.id) {
-                *task = updated_task;
-            }
+        if task.status == TaskStatus::Running
+            && let Ok(updated_task) = update_task_status_by_process_check(conn, &task.id)
+        {
+            *task = updated_task;
         }
     }
 

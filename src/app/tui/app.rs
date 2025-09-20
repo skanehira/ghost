@@ -277,22 +277,22 @@ impl TuiApp {
     }
 
     fn initialize_log_view(&mut self) {
-        if let Some(selected) = self.table_scroll.selected() {
-            if selected < self.tasks.len() {
-                let selected_task = &self.tasks[selected];
-                let log_path = &selected_task.log_path;
+        if let Some(selected) = self.table_scroll.selected()
+            && selected < self.tasks.len()
+        {
+            let selected_task = &self.tasks[selected];
+            let log_path = &selected_task.log_path;
 
-                // Check cache first
-                if let Some(cache) = self.log_cache.get(log_path) {
-                    self.log_lines_count = cache.content.len();
-                } else {
-                    // If not in cache, we'll load it on first render
-                    self.log_lines_count = 0;
-                }
-
-                // Reset scroll state to start from the top
-                self.log_scroll_state.scroll_to_top();
+            // Check cache first
+            if let Some(cache) = self.log_cache.get(log_path) {
+                self.log_lines_count = cache.content.len();
+            } else {
+                // If not in cache, we'll load it on first render
+                self.log_lines_count = 0;
             }
+
+            // Reset scroll state to start from the top
+            self.log_scroll_state.scroll_to_top();
         }
     }
 
@@ -317,90 +317,86 @@ impl TuiApp {
 
     /// Render log view widget
     fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
-        if let Some(selected) = self.table_scroll.selected() {
-            if selected < self.tasks.len() {
-                let selected_task = &self.tasks[selected];
-                let log_path = &selected_task.log_path;
+        if let Some(selected) = self.table_scroll.selected()
+            && selected < self.tasks.len()
+        {
+            let selected_task = &self.tasks[selected];
+            let log_path = &selected_task.log_path;
 
-                // Check if we need to reload or incrementally update the file
-                let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
-                    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    let file_size = metadata.len();
+            // Check if we need to reload or incrementally update the file
+            let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                let file_size = metadata.len();
 
-                    if let Some(cache) = self.log_cache.get(log_path) {
-                        if modified > cache.last_modified {
-                            if file_size > cache.file_size {
-                                // File grew, use incremental update
-                                UpdateStrategy::Incremental(cache.file_size)
-                            } else {
-                                // File changed in other ways, full reload
-                                UpdateStrategy::FullReload
-                            }
+                if let Some(cache) = self.log_cache.get(log_path) {
+                    if modified > cache.last_modified {
+                        if file_size > cache.file_size {
+                            // File grew, use incremental update
+                            UpdateStrategy::Incremental(cache.file_size)
                         } else {
-                            // No changes
-                            UpdateStrategy::UseCache
+                            // File changed in other ways, full reload
+                            UpdateStrategy::FullReload
                         }
                     } else {
-                        // No cache exists, need to load
-                        UpdateStrategy::FullReload
+                        // No changes
+                        UpdateStrategy::UseCache
                     }
                 } else {
-                    // File doesn't exist or can't read metadata
-                    UpdateStrategy::UseCache
-                };
-
-                // Use scrollview widget
-                let mut scrollview_widget = match update_strategy {
-                    UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
-                    UpdateStrategy::Incremental(previous_size) => {
-                        let cache = self.log_cache.get(log_path).unwrap();
-                        LogViewerScrollWidget::load_incremental_content(
-                            selected_task,
-                            cache.content.clone(),
-                            previous_size,
-                        )
-                    }
-                    UpdateStrategy::UseCache => {
-                        let cache = self.log_cache.get(log_path).unwrap();
-                        LogViewerScrollWidget::with_cached_content(
-                            selected_task,
-                            cache.content.clone(),
-                        )
-                    }
-                };
-
-                // Set auto-scroll state from app
-                if self.auto_scroll_enabled {
-                    scrollview_widget.enable_auto_scroll();
-                } else {
-                    scrollview_widget.disable_auto_scroll();
+                    // No cache exists, need to load
+                    UpdateStrategy::FullReload
                 }
+            } else {
+                // File doesn't exist or can't read metadata
+                UpdateStrategy::UseCache
+            };
 
-                // Update cache if needed
-                if matches!(
-                    update_strategy,
-                    UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
-                ) {
-                    if let Ok(metadata) = fs::metadata(log_path) {
-                        let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                        self.log_cache.insert(
-                            log_path.clone(),
-                            LogCache {
-                                content: scrollview_widget.get_lines().to_vec(),
-                                last_modified: modified,
-                                file_size: metadata.len(),
-                            },
-                        );
-                    }
+            // Use scrollview widget
+            let mut scrollview_widget = match update_strategy {
+                UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
+                UpdateStrategy::Incremental(previous_size) => {
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    LogViewerScrollWidget::load_incremental_content(
+                        selected_task,
+                        cache.content.clone(),
+                        previous_size,
+                    )
                 }
+                UpdateStrategy::UseCache => {
+                    let cache = self.log_cache.get(log_path).unwrap();
+                    LogViewerScrollWidget::with_cached_content(selected_task, cache.content.clone())
+                }
+            };
 
-                // Handle auto-scroll update
-                let new_line_count = scrollview_widget.get_lines_count();
-                self.handle_auto_scroll_update(&update_strategy, new_line_count);
-
-                // Render with scrollview state
-                frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
+            // Set auto-scroll state from app
+            if self.auto_scroll_enabled {
+                scrollview_widget.enable_auto_scroll();
+            } else {
+                scrollview_widget.disable_auto_scroll();
             }
+
+            // Update cache if needed
+            if matches!(
+                update_strategy,
+                UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+            ) && let Ok(metadata) = fs::metadata(log_path)
+            {
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                self.log_cache.insert(
+                    log_path.clone(),
+                    LogCache {
+                        content: scrollview_widget.get_lines().to_vec(),
+                        last_modified: modified,
+                        file_size: metadata.len(),
+                    },
+                );
+            }
+
+            // Handle auto-scroll update
+            let new_line_count = scrollview_widget.get_lines_count();
+            self.handle_auto_scroll_update(&update_strategy, new_line_count);
+
+            // Render with scrollview state
+            frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
         }
     }
 
@@ -416,7 +412,7 @@ impl TuiApp {
 
             // Send signal to stop the task (commands::stop handles process group killing)
             // Use show_output=false to suppress console output in TUI
-            let _ = crate::app::commands::stop(task_id, force, false);
+            let _ = crate::app::commands::stop(&self.conn, task_id, force, false);
 
             // Refresh task list to update status
             let _ = self.refresh_tasks();
