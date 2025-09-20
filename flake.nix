@@ -22,6 +22,8 @@
           inherit system;
           overlays = overlays;
         };
+        cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        packageName = cargoToml.package.name;
         toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         naersk-lib = pkgs.callPackage naersk {
           cargo = toolchain;
@@ -43,7 +45,7 @@
             description = "Simple background process manager with a TUI for Unix-like systems.";
             homepage = "https://github.com/skanehira/ghost";
             license = licenses.mit;
-            mainProgram = "ghost";
+            mainProgram = packageName;
             platforms = platforms.unix;
           };
         };
