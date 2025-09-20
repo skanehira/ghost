@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1758394351214,
+  "lastUpdate": 1758394407395,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1889,6 +1889,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.34,
             "range": "± 1.63",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "distinct": true,
+          "id": "2b91f3bf4c3c246c275eae9592372738cc230ffb",
+          "message": "chore: bump up version 0.2.0",
+          "timestamp": "2025-09-21T03:51:06+09:00",
+          "tree_id": "e9e67a0ef6748494202986042702729f440e819d",
+          "url": "https://github.com/skanehira/ghost/commit/2b91f3bf4c3c246c275eae9592372738cc230ffb"
+        },
+        "date": 1758394406893,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.52,
+            "range": "± 3.41",
             "unit": "ns/iter"
           }
         ]
