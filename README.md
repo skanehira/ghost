@@ -22,6 +22,7 @@ Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD
 - **Port Detection**: Real-time listening port detection for running processes
 - **Log Management**: Automatic log file creation and real-time following
 - **Working Directory Tracking**: See where each command was executed
+- **MCP Server Support**: Integrate with AI assistants via Model Context Protocol
 - **No Daemon Required**: Simple one-shot execution model
 
 This tool was inspired by:
@@ -284,6 +285,50 @@ $ ghost list
 - `g`/`G`: Jump to top/bottom
 - `Esc`: Return to task list
 
+### MCP Server Mode
+
+Ghost supports the Model Context Protocol (MCP), allowing it to be used as an MCP server for AI assistants like Claude.
+
+#### Starting the MCP Server
+
+```bash
+ghost mcp
+```
+
+This starts an MCP server on stdio that can be used by AI assistants.
+
+#### Available MCP Tools
+
+- **ghost_run**: Run a command as a background process
+  - Parameters: command, args, cwd, env
+- **ghost_list**: List all managed processes
+  - Parameters: status (filter), running (boolean)
+- **ghost_stop**: Stop a running process
+  - Parameters: id
+- **ghost_log**: Get logs for a process
+  - Parameters: id
+
+#### Configuration for Claude Desktop
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "ghost": {
+      "command": "/path/to/ghost",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Once configured, you can use natural language to interact with ghost through Claude:
+- "Use ghost to run a web server on port 8080"
+- "List all running processes managed by ghost"
+- "Stop the process with ID abc123"
+- "Show me the logs for process xyz789"
+
 ### Key Features
 
 - **No Daemon Required**: Each command is self-contained
@@ -291,6 +336,7 @@ $ ghost list
 - **Port Detection**: Real-time listening port detection via `lsof`
 - **Log Persistence**: All output is captured and stored
 - **Status Monitoring**: Real-time status updates via process checking
+- **MCP Integration**: Control ghost through AI assistants
 - **Cross-Platform**: Works on Unix-like systems (Linux, macOS)
 
 ### Configuration

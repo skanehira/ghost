@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use ghost::app::commands;
+use ghost::app::{commands, storage};
 
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
@@ -82,6 +82,9 @@ enum Commands {
         #[arg(short, long)]
         all: bool,
     },
+
+    /// Run MCP server for ghost operations
+    Mcp,
 }
 
 #[tokio::main]
@@ -89,18 +92,41 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Some(Commands::Run { command, cwd, env }) => commands::spawn(command, cwd, env),
-        Some(Commands::List { status }) => commands::list(status),
-        Some(Commands::Log { task_id, follow }) => commands::log(&task_id, follow).await,
-        Some(Commands::Stop { task_id, force }) => commands::stop(&task_id, force, true),
-        Some(Commands::Status { task_id }) => commands::status(&task_id),
-        Some(Commands::Cleanup {
-            days,
-            status,
-            dry_run,
-            all,
-        }) => commands::cleanup(days, status, dry_run, all),
-        None => commands::tui().await, // No subcommand = start TUI
+        Some(cmd) => {
+            // Initialize database connection once for all commands (except TUI)
+            match storage::init_database() {
+                Ok(conn) => match cmd {
+                    Commands::Run { command, cwd, env } => {
+                        commands::spawn(&conn, command, cwd, env, true).map(|_| ())
+                    }
+                    Commands::List { status } => commands::list(&conn, status, true).map(|_| ()),
+                    Commands::Log { task_id, follow } => {
+                        commands::log(&conn, &task_id, follow, true)
+                            .await
+                            .map(|_| ())
+                    }
+                    Commands::Stop { task_id, force } => {
+                        commands::stop(&conn, &task_id, force, true)
+                    }
+                    Commands::Status { task_id } => {
+                        commands::status(&conn, &task_id, true).map(|_| ())
+                    }
+                    Commands::Cleanup {
+                        days,
+                        status,
+                        dry_run,
+                        all,
+                    } => commands::cleanup(&conn, days, status, dry_run, all),
+                    Commands::Mcp => ghost::mcp::run_stdio_server(conn).await.map_err(|e| {
+                        ghost::app::error::GhostError::Config {
+                            message: e.to_string(),
+                        }
+                    }),
+                },
+                Err(e) => Err(e),
+            }
+        }
+        None => commands::tui().await,
     };
 
     if let Err(e) = result {

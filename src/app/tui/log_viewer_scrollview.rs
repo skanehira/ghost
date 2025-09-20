@@ -139,7 +139,7 @@ impl LogViewerScrollWidget {
     }
 
     /// Create footer widget
-    fn create_footer(&self) -> Paragraph {
+    fn create_footer(&'_ self) -> Paragraph<'_> {
         let auto_scroll_status = if self.auto_scroll_enabled {
             "ON"
         } else {

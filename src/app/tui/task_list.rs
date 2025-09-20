@@ -85,7 +85,7 @@ impl<'a> TaskListWidget<'a> {
         dt.format("%Y-%m-%d %H:%M").to_string()
     }
 
-    fn create_header_row(&self) -> Row {
+    fn create_header_row(&self) -> Row<'_> {
         Row::new(vec![
             Cell::from(" ID"),
             Cell::from(" PID"),

@@ -1,6 +1,6 @@
 use super::task_status::TaskStatus;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Task {
     pub id: String,
     pub pid: u32,
