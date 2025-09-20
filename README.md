@@ -46,6 +46,20 @@ cargo build --release
 
 The binary will be available at `target/release/ghost`.
 
+### Run with Nix
+
+If you have [Nix flakes](https://nixos.wiki/wiki/Flakes) enabled, you can run Ghost without cloning the repository:
+
+```bash
+nix run github:skanehira/ghost -- --help
+```
+
+The flake also provides a dev shell with the Rust toolchain pinned in `rust-toolchain.toml`:
+
+```bash
+nix develop github:skanehira/ghost
+```
+
 ### Install
 
 ```bash
