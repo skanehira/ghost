@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1758382026321,
+  "lastUpdate": 1758394351214,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1859,6 +1859,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 19.14,
             "range": "± 3.02",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "sho19921005@gmail.com",
+            "name": "skanehira",
+            "username": "skanehira"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfb49cfcd4e35f84374f403f4ab92e60039c570e",
+          "message": "feat mcp (#34)\n\n* impl: mcp\n\n* test: add integration test",
+          "timestamp": "2025-09-21T03:50:21+09:00",
+          "tree_id": "22b5d6afdc431436c82377cee42bc9cb85508b94",
+          "url": "https://github.com/skanehira/ghost/commit/bfb49cfcd4e35f84374f403f4ab92e60039c570e"
+        },
+        "date": 1758394350283,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.34,
+            "range": "± 1.63",
             "unit": "ns/iter"
           }
         ]
