@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757490561289,
+  "lastUpdate": 1758381945617,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1709,6 +1709,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.03,
             "range": "± 2.24",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9d478392e001034780578b25af5e3f3858a2c40",
+          "message": "chore(deps): bump clap from 4.5.45 to 4.5.47 (#28)\n\nBumps [clap](https://github.com/clap-rs/clap) from 4.5.45 to 4.5.47.\n- [Release notes](https://github.com/clap-rs/clap/releases)\n- [Changelog](https://github.com/clap-rs/clap/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/clap-rs/clap/compare/clap_complete-v4.5.45...clap_complete-v4.5.47)\n\n---\nupdated-dependencies:\n- dependency-name: clap\n  dependency-version: 4.5.47\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\nCo-authored-by: skanehira <sho19921005@gmail.com>",
+          "timestamp": "2025-09-21T00:24:07+09:00",
+          "tree_id": "b2736119534f5f0845f32609158936b177b11391",
+          "url": "https://github.com/skanehira/ghost/commit/e9d478392e001034780578b25af5e3f3858a2c40"
+        },
+        "date": 1758381945025,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 19.07,
+            "range": "± 2.06",
             "unit": "ns/iter"
           }
         ]
