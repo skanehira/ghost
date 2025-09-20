@@ -29,6 +29,7 @@ Ghost is a simple background process manager for Unix systems (Linux, macOS, BSD
 - **Short ID Support**: Use abbreviated task IDs for convenience
 - **Working Directory Tracking**: See where each command was executed with path shortening
 - **Port Detection**: Automatic web server port detection for running processes
+- **MCP Server Support**: Integrate with AI assistants via Model Context Protocol (`ghost mcp`)
 - **Browser Integration**: One-key browser opening for web servers (o key)
 - **Enhanced TUI Layout**: Optimized column ordering and directory display
 - **No Daemon Required**: Simple one-shot execution model
@@ -544,12 +545,57 @@ $ ghost run rails server  # Usually runs on port 3000
 - Example: `/Users/john/Projects/my-app/src` → `~/P/m/src`
 - Optimized column layout with Started time moved to first column
 
+### MCP Server Mode
+
+Ghost supports the Model Context Protocol (MCP), allowing it to be used as an MCP server for AI assistants like Claude.
+
+#### Starting the MCP Server
+
+```bash
+ghost mcp
+```
+
+This starts an MCP server on stdio that can be used by AI assistants.
+
+#### Available MCP Tools
+
+- **ghost_run**: Run a command as a background process
+  - Parameters: command, args, cwd, env
+- **ghost_list**: List all managed processes
+  - Parameters: status (filter), running (boolean)
+- **ghost_stop**: Stop a running process
+  - Parameters: id
+- **ghost_log**: Get logs for a process
+  - Parameters: id
+
+#### Configuration for Claude Desktop
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "ghost": {
+      "command": "/path/to/ghost",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Once configured, you can use natural language to interact with ghost through Claude:
+- "Use ghost to run a web server on port 8080"
+- "List all running processes managed by ghost"
+- "Stop the process with ID abc123"
+- "Show me the logs for process xyz789"
+
 ### Key Features
 
 - **No Daemon Required**: Each command is self-contained
 - **Process Isolation**: Tasks run as independent processes
 - **Log Persistence**: All output is captured and stored
 - **Status Monitoring**: Real-time status updates via process checking
+- **MCP Integration**: Control ghost through AI assistants
 - **Cross-Platform**: Works on Unix-like systems (Linux, macOS)
 
 ### Configuration

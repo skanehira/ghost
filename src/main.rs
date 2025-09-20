@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use ghost::app::commands;
+use ghost::app::{commands, storage};
 
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
@@ -112,6 +112,9 @@ enum Commands {
         #[arg(short, long)]
         all: bool,
     },
+
+    /// Run MCP server for ghost operations
+    Mcp,
 }
 
 #[tokio::main]
@@ -119,7 +122,9 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Some(Commands::Run { command, cwd, env }) => commands::spawn(command, cwd, env),
+        Some(Commands::Run { command, cwd, env }) => {
+            commands::spawn(command, cwd, env)
+        }
         Some(Commands::List { status, all }) => commands::list(status, all),
         Some(Commands::Log {
             task_id,
@@ -137,6 +142,14 @@ async fn main() {
             dry_run,
             all,
         }) => commands::cleanup(days, status, dry_run, all),
+        Some(Commands::Mcp) => match storage::init_database() {
+            Ok(conn) => ghost::mcp::run_stdio_server(conn).await.map_err(|e| {
+                ghost::app::error::GhostError::Config {
+                    message: e.to_string(),
+                }
+            }),
+            Err(e) => Err(e),
+        },
         None => commands::tui(cli.day).await, // No subcommand = start TUI
     };
 

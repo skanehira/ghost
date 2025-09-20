@@ -179,7 +179,7 @@ impl<'a> TaskListWidget<'a> {
         result
     }
 
-    fn create_header_row(&self) -> Row {
+    fn create_header_row(&self) -> Row<'_> {
         Row::new(vec![
             Cell::from(" Started"),
             Cell::from(" ID"),

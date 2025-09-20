@@ -1,6 +1,4 @@
 /target
 .DS_Store
 test_log.txt
-/.serena
 **/*.pkl
-/.serena

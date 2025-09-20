@@ -567,14 +567,11 @@ impl TuiApp {
 
                 // Save the selected task for log view
                 self.current_log_task = Some(selected_task.clone());
-
                 let log_path = &selected_task.log_path;
 
-                // Check cache first
                 if let Some(cache) = self.log_cache.get(log_path) {
                     self.log_lines_count = cache.content.len();
                 } else {
-                    // If not in cache, we'll load it on first render
                     self.log_lines_count = 0;
                 }
 
@@ -586,6 +583,7 @@ impl TuiApp {
             }
         }
     }
+
 
     /// Render the TUI
     pub fn render(&mut self, frame: &mut Frame) {
@@ -704,8 +702,10 @@ impl TuiApp {
 
     /// Render log view widget
     fn render_log_view(&mut self, frame: &mut Frame, area: Rect) {
+
         if let Some(ref selected_task) = self.current_log_task {
             let log_path = &selected_task.log_path;
+
 
             // Check if we need to reload or incrementally update the file
             let update_strategy = if let Ok(metadata) = fs::metadata(log_path) {
@@ -726,6 +726,7 @@ impl TuiApp {
                         UpdateStrategy::UseCache
                     }
                 } else {
+
                     // No cache exists, need to load
                     UpdateStrategy::FullReload
                 }
@@ -736,18 +737,25 @@ impl TuiApp {
 
             // Use scrollview widget
             let scrollview_widget = match update_strategy {
-                UpdateStrategy::FullReload => LogViewerScrollWidget::new(selected_task),
+                UpdateStrategy::FullReload => {
+                    LogViewerScrollWidget::new(selected_task, self.log_auto_scroll)
+                }
                 UpdateStrategy::Incremental(previous_size) => {
                     let cache = self.log_cache.get(log_path).unwrap();
                     LogViewerScrollWidget::load_incremental_content(
                         selected_task,
                         cache.content.clone(),
                         previous_size,
+                        self.log_auto_scroll,
                     )
                 }
                 UpdateStrategy::UseCache => {
                     let cache = self.log_cache.get(log_path).unwrap();
-                    LogViewerScrollWidget::with_cached_content(selected_task, cache.content.clone())
+                    LogViewerScrollWidget::with_cached_content(
+                        selected_task,
+                        cache.content.clone(),
+                        self.log_auto_scroll,
+                    )
                 }
             };
 
@@ -805,8 +813,35 @@ impl TuiApp {
                     ]));
 
                     frame.render_widget(indicator, indicator_area);
+
                 }
+
+
             }
+
+            // Update cache if needed
+            if matches!(
+                update_strategy,
+                UpdateStrategy::FullReload | UpdateStrategy::Incremental(_)
+            ) && let Ok(metadata) = fs::metadata(log_path)
+            {
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                self.log_cache.insert(
+                    log_path.clone(),
+                    LogCache {
+                        content: scrollview_widget.get_lines().to_vec(),
+                        last_modified: modified,
+                        file_size: metadata.len(),
+                    },
+                );
+            }
+
+            // Handle auto-scroll update
+            let new_line_count = scrollview_widget.get_lines_count();
+            self.handle_auto_scroll_update(&update_strategy, new_line_count);
+
+            // Render with scrollview state
+            frame.render_stateful_widget(scrollview_widget, area, &mut self.log_scroll_state);
         }
     }
 
@@ -823,7 +858,7 @@ impl TuiApp {
 
             // Send signal to stop the task (commands::stop handles process group killing)
             // Use show_output=false to suppress console output in TUI
-            let _ = crate::app::commands::stop(task_id, force, false);
+            let _ = crate::app::commands::stop(&self.conn, task_id, force, false);
 
             // Refresh task list to update status
             let _ = self.refresh_tasks();

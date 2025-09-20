@@ -34,8 +34,20 @@ fn wrap_with_user_shell(command: Vec<String>) -> Vec<String> {
     vec![shell, "-lc".to_string(), command_str]
 }
 
-/// Run a command in the background
+/// Run a command in the background (classic wrapper that manages its own connection)
 pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Result<()> {
+    let conn = storage::init_database()?;
+    spawn_with_conn(&conn, command, cwd, env, true).map(|_| ())
+}
+
+/// Run a command in the background using a shared database connection.
+pub fn spawn_with_conn(
+    conn: &Connection,
+    command: Vec<String>,
+    cwd: Option<PathBuf>,
+    env: Vec<String>,
+    show_output: bool,
+) -> Result<process::ProcessInfo> {
     if command.is_empty() {
         return Err(error::GhostError::InvalidArgument {
             message: "No command specified".to_string(),
@@ -46,13 +58,12 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
     let processed_command = wrap_with_user_shell(command.clone());
 
     let env_vars = config::env::parse_env_vars(&env)?;
-    let conn = storage::init_database()?;
     let (process_info, mut child) = spawn_and_register_process(
         command,           // Original command for database
         processed_command, // Wrapped command for execution
         cwd,
         env_vars,
-        &conn,
+        conn,
     )?;
 
     // Verify process actually started
@@ -62,7 +73,7 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
     if !process_started {
         // Update status to exited if process failed to start
         storage::update_task_status(
-            &conn,
+            conn,
             &process_info.id,
             storage::TaskStatus::Exited,
             Some(1),
@@ -71,7 +82,10 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
             message: "Process exited immediately after starting".to_string(),
         });
     }
-    display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
+
+    if show_output {
+        display::print_process_started(&process_info.id, process_info.pid, &process_info.log_path);
+    }
 
     // Spawn a blocking task to wait for the child process to prevent zombies without
     // blocking async runtime executor threads.
@@ -79,7 +93,7 @@ pub fn spawn(command: Vec<String>, cwd: Option<PathBuf>, env: Vec<String>) -> Re
         let _ = child.wait();
     });
 
-    Ok(())
+    Ok(process_info)
 }
 
 /// Spawn process and register it in the database
@@ -134,68 +148,111 @@ pub fn spawn_with_shell_wrapper(
     spawn_and_register_process(original_command, execution_command, cwd, env_vars, conn)
 }
 
-/// List all background processes
+/// List all background processes (classic wrapper that manages its own connection)
 pub fn list(status_filter: Option<String>, show_all: bool) -> Result<()> {
     let conn = storage::init_database()?;
-    let tasks = storage::get_tasks_with_process_check(&conn, status_filter.as_deref(), show_all)?;
-    display::print_task_list(&tasks);
+    list_with_conn(&conn, status_filter, show_all, true).map(|_| ())
+}
 
-    Ok(())
+/// List background processes using a shared connection.
+pub fn list_with_conn(
+    conn: &Connection,
+    status_filter: Option<String>,
+    show_all: bool,
+    show_output: bool,
+) -> Result<Vec<storage::task::Task>> {
+    let tasks = storage::get_tasks_with_process_check(conn, status_filter.as_deref(), show_all)?;
+
+    if show_output {
+        display::print_task_list(&tasks);
+    }
+
+    Ok(tasks)
 }
 
 /// Show logs for a process
-pub async fn log(task_id: &str, follow: bool, all: bool, head: usize, tail: usize) -> Result<()> {
+pub async fn log(
+    task_id: &str,
+    follow: bool,
+    all: bool,
+    head: usize,
+    tail: usize,
+) -> Result<()> {
     let conn = storage::init_database()?;
-    let task = get_task_by_id_or_short_id(&conn, task_id)?;
-
-    let log_path = PathBuf::from(&task.log_path);
-
-    if follow {
-        display::print_log_follow_header(task_id, &task.log_path);
-        helpers::follow_log_file(&log_path).await?;
-    } else {
-        let content =
-            std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
-                message: format!("Failed to read log file: {e}"),
-            })?;
-
-        if all || content.is_empty() {
-            // Show all content
-            print!("{content}");
-        } else {
-            // Show head + tail
-            let lines: Vec<&str> = content.lines().collect();
-            let total_lines = lines.len();
-
-            if total_lines <= head + tail {
-                // If total lines is less than or equal to head + tail, show all
-                print!("{content}");
-            } else {
-                // Show head lines
-                for line in lines.iter().take(head) {
-                    println!("{line}");
-                }
-
-                // Show separator if there are skipped lines
-                if total_lines > head + tail {
-                    println!("\n... {} lines omitted ...\n", total_lines - head - tail);
-                }
-
-                // Show tail lines
-                for line in lines.iter().skip(total_lines.saturating_sub(tail)) {
-                    println!("{line}");
-                }
-            }
-        }
-    }
-
-    Ok(())
+    log_with_conn(&conn, task_id, follow, all, head, tail, true)
+        .await
+        .map(|_| ())
 }
 
-/// Stop a background process
+pub async fn log_with_conn(
+    conn: &Connection,
+    task_id: &str,
+    follow: bool,
+    all: bool,
+    head: usize,
+    tail: usize,
+    show_output: bool,
+) -> Result<String> {
+    let task = get_task_by_id_or_short_id(conn, task_id)?;
+    let log_path = PathBuf::from(&task.log_path);
+
+    let full_content =
+        std::fs::read_to_string(&log_path).map_err(|e| error::GhostError::InvalidArgument {
+            message: format!("Failed to read log file: {e}"),
+        })?;
+
+    if follow {
+        if show_output {
+            display::print_log_follow_header(task_id, &task.log_path);
+            helpers::follow_log_file(&log_path).await?;
+        }
+        return Ok(full_content);
+    }
+
+    let rendered_content = if all || full_content.is_empty() {
+        full_content.clone()
+    } else {
+        let lines: Vec<&str> = full_content.lines().collect();
+        let total_lines = lines.len();
+        if total_lines <= head + tail {
+            full_content.clone()
+        } else {
+            let mut buffer = String::new();
+            for line in lines.iter().take(head) {
+                buffer.push_str(line);
+                buffer.push('\n');
+            }
+            if total_lines > head + tail {
+                buffer.push_str(&format!("\n... {} lines omitted ...\n\n", total_lines - head - tail));
+            }
+            for line in lines.iter().skip(total_lines.saturating_sub(tail)) {
+                buffer.push_str(line);
+                buffer.push('\n');
+            }
+            buffer
+        }
+    };
+
+    if show_output {
+        print!("{rendered_content}");
+    }
+
+    Ok(rendered_content)
+}
+
+/// Stop a background process (classic wrapper)
 pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     let conn = storage::init_database()?;
-    let task = get_task_by_id_or_short_id(&conn, task_id)?;
+    stop_with_conn(&conn, task_id, force, show_output)
+}
+
+pub fn stop_with_conn(
+    conn: &Connection,
+    task_id: &str,
+    force: bool,
+    show_output: bool,
+) -> Result<()> {
+    let task = get_task_by_id_or_short_id(conn, task_id)?;
 
     helpers::validate_task_running(&task)?;
 
@@ -212,7 +269,7 @@ pub fn stop(task_id: &str, force: bool, show_output: bool) -> Result<()> {
     } else {
         storage::TaskStatus::Exited
     };
-    storage::update_task_status(&conn, &task.id, status, None)?;
+    storage::update_task_status(conn, &task.id, status, None)?;
 
     if show_output {
         let pid = task.pid;
@@ -273,7 +330,7 @@ pub fn restart(task_id: &str, force: bool) -> Result<()> {
 
     // Start the task again with original working directory and environment
     println!("Starting task {task_id}...");
-    match spawn(command, cwd, env) {
+    match spawn_with_conn(&conn, command, cwd, env, true) {
         Ok(_) => {
             let action = if is_running { "restarted" } else { "rerun" };
             println!("Task {task_id} has been {action} successfully");
@@ -291,20 +348,42 @@ pub fn restart(task_id: &str, force: bool) -> Result<()> {
 /// Check status of a background process
 pub fn status(task_id: &str) -> Result<()> {
     let conn = storage::init_database()?;
+    status_with_conn(&conn, task_id, true).map(|_| ())
+}
 
-    // First get the task to resolve short ID to full ID
-    let task = get_task_by_id_or_short_id(&conn, task_id)?;
-    // Then update the status if the process is no longer running
-    let task = storage::update_task_status_by_process_check(&conn, &task.id)?;
-    display::print_task_details(&task);
+pub fn status_with_conn(
+    conn: &Connection,
+    task_id: &str,
+    show_output: bool,
+) -> Result<storage::task::Task> {
+    let task = get_task_by_id_or_short_id(conn, task_id)?;
+    let task = storage::update_task_status_by_process_check(conn, &task.id)?;
 
-    Ok(())
+    if show_output {
+        display::print_task_details(&task);
+    }
+
+    Ok(task)
 }
 
 /// Clean up old finished tasks
-pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> Result<()> {
+pub fn cleanup(
+    days: u64,
+    status: Option<String>,
+    dry_run: bool,
+    all: bool,
+) -> Result<()> {
     let conn = storage::init_database()?;
+    cleanup_with_conn(&conn, days, status, dry_run, all)
+}
 
+pub fn cleanup_with_conn(
+    conn: &Connection,
+    days: u64,
+    status: Option<String>,
+    dry_run: bool,
+    all: bool,
+) -> Result<()> {
     // Parse status filter
     let status_filter = parse_status_filter(status.as_deref())?;
 
@@ -313,7 +392,7 @@ pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> R
 
     if dry_run {
         // Show what would be deleted
-        let candidates = storage::get_cleanup_candidates(&conn, days_filter, &status_filter)?;
+        let candidates = storage::get_cleanup_candidates(conn, days_filter, &status_filter)?;
 
         if candidates.is_empty() {
             println!("No tasks found matching cleanup criteria.");
@@ -335,7 +414,7 @@ pub fn cleanup(days: u64, status: Option<String>, dry_run: bool, all: bool) -> R
         }
     } else {
         // Actually delete tasks
-        let deleted_count = storage::cleanup_tasks_by_criteria(&conn, days_filter, &status_filter)?;
+        let deleted_count = storage::cleanup_tasks_by_criteria(conn, days_filter, &status_filter)?;
 
         if deleted_count == 0 {
             println!("No tasks found matching cleanup criteria.");

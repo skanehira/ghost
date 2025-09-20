@@ -1,7 +1,7 @@
 use super::task_status::TaskStatus;
 use chrono::{DateTime, Duration, Local, TimeZone};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Task {
     pub id: String,
     pub pid: u32,

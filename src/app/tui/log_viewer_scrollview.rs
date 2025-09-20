@@ -19,27 +19,34 @@ pub struct LogViewerScrollWidget {
     task_id: String,
     command: String,
     cwd: Option<String>,
+    auto_scroll_enabled: bool,
 }
 
 impl LogViewerScrollWidget {
     /// Create a new log viewer with loaded content
-    pub fn new(task: &Task) -> Self {
+    pub fn new(task: &Task, auto_scroll_enabled: bool) -> Self {
         let lines = Self::load_log_file(&task.log_path);
         Self {
             lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
             cwd: task.cwd.clone(),
+            auto_scroll_enabled,
         }
     }
 
     /// Create with cached content
-    pub fn with_cached_content(task: &Task, cached_lines: Vec<String>) -> Self {
+    pub fn with_cached_content(
+        task: &Task,
+        cached_lines: Vec<String>,
+        auto_scroll_enabled: bool,
+    ) -> Self {
         Self {
             lines: cached_lines,
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
             cwd: task.cwd.clone(),
+            auto_scroll_enabled,
         }
     }
 
@@ -48,6 +55,7 @@ impl LogViewerScrollWidget {
         task: &Task,
         mut existing_lines: Vec<String>,
         previous_size: u64,
+        auto_scroll_enabled: bool,
     ) -> Self {
         // Try to read only the new content
         if let Ok(mut file) = std::fs::File::open(&task.log_path) {
@@ -76,6 +84,7 @@ impl LogViewerScrollWidget {
             task_id: task.id.clone(),
             command: Self::parse_command(&task.command),
             cwd: task.cwd.clone(),
+            auto_scroll_enabled,
         }
     }
 
@@ -118,8 +127,13 @@ impl LogViewerScrollWidget {
     }
 
     /// Create footer widget
+
     fn create_footer(&self) -> Paragraph {
-        let keybinds = " j/k:Scroll  h/l:Horizontal  C-d/C-u:Page  gg/G:Top/Bottom  f:Auto-Scroll  d:Details  /:Search  q/Esc:Back ";
+        let auto_scroll_status = if self.auto_scroll_enabled { "ON" } else { "OFF" };
+        let keybinds = format!(
+            " j/k:Scroll  h/l:Horizontal  C-d/C-u:Page  gg/G:Top/Bottom  f:Auto({auto_scroll_status})  d:Details  /:Search  q/Esc:Back "
+        );
+
 
         Paragraph::new(keybinds).block(
             Block::default()
