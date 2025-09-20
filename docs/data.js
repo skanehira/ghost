@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1758381954744,
+  "lastUpdate": 1758381982203,
   "repoUrl": "https://github.com/skanehira/ghost",
   "entries": {
     "Rust Benchmark": [
@@ -1769,6 +1769,36 @@ window.BENCHMARK_DATA = {
             "name": "tests::bench_fib",
             "value": 18.95,
             "range": "± 2.53",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd3bc2e021e95ad8c4589d6bad9130b78147f141",
+          "message": "chore(deps): bump chrono from 0.4.41 to 0.4.42 (#30)\n\nBumps [chrono](https://github.com/chronotope/chrono) from 0.4.41 to 0.4.42.\n- [Release notes](https://github.com/chronotope/chrono/releases)\n- [Changelog](https://github.com/chronotope/chrono/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/chronotope/chrono/compare/v0.4.41...v0.4.42)\n\n---\nupdated-dependencies:\n- dependency-name: chrono\n  dependency-version: 0.4.42\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-09-21T00:24:39+09:00",
+          "tree_id": "85d6de3918bf76fc26596e02c7fa65b8d9112edb",
+          "url": "https://github.com/skanehira/ghost/commit/cd3bc2e021e95ad8c4589d6bad9130b78147f141"
+        },
+        "date": 1758381981818,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "tests::bench_fib",
+            "value": 18.35,
+            "range": "± 2.55",
             "unit": "ns/iter"
           }
         ]
