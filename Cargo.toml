@@ -5,7 +5,7 @@ authors = ["skanehira"]
 edition = "2024"
 
 [dependencies]
-clap = { version = "4.5.47", features = ["derive"] }
+clap = { version = "4.5.48", features = ["derive"] }
 uuid = { version = "1.18", features = ["v4"] }
 thiserror = "2.0"
 dirs = "6.0"
