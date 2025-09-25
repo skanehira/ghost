@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet, VecDeque};
+
 /// Utilities for extracting port information from running processes
 /// Extract port number from process using lsof (including child processes)
 ///
@@ -9,14 +11,21 @@
 /// - If multiple HTTP candidates, prefer ones that look like HTML (contains <html or <!DOCTYPE)
 /// - As a final tie-breaker, prefer commonly used dev ports (non-hardcoded single port)
 pub fn extract_port_from_process(pid: u32) -> String {
-    let pids_to_check = collect_descendant_pids_inclusive(pid);
+    let children_map = build_process_children_map();
+    let pids_to_check = collect_descendant_pids(pid, &children_map);
+
+    let port_lookup = extract_ports_for_processes(&pids_to_check).unwrap_or_default();
+    let mut inspector_cache: HashMap<u32, HashSet<u16>> = HashMap::new();
 
     // Gather candidate ports with their owning pid
     let mut candidates: Vec<(u16, u32)> = Vec::new();
-    for check_pid in pids_to_check {
-        let inspector_ports = inspector_ports_from_cmdline(check_pid);
-        if let Some(ports) = extract_ports_from_single_process(check_pid) {
-            for port in ports {
+    for &check_pid in &pids_to_check {
+        let inspector_ports = inspector_cache
+            .entry(check_pid)
+            .or_insert_with(|| inspector_ports_from_cmdline(check_pid));
+
+        if let Some(ports) = port_lookup.get(&check_pid) {
+            for &port in ports {
                 if inspector_ports.contains(&port) {
                     continue; // skip explicit inspector/debug ports
                 }
@@ -42,16 +51,22 @@ pub fn extract_port_from_process(pid: u32) -> String {
     "-".to_string()
 }
 
-
 /// Extract web server info from process ID using lsof (returns :port format for TUI compatibility)
 pub fn extract_web_server_info(pid: u32) -> Option<String> {
-    let pids_to_check = collect_descendant_pids_inclusive(pid);
+    let children_map = build_process_children_map();
+    let pids_to_check = collect_descendant_pids(pid, &children_map);
+
+    let port_lookup = extract_ports_for_processes(&pids_to_check).unwrap_or_default();
+    let mut inspector_cache: HashMap<u32, HashSet<u16>> = HashMap::new();
 
     let mut candidates: Vec<(u16, u32)> = Vec::new();
-    for check_pid in pids_to_check {
-        let inspector_ports = inspector_ports_from_cmdline(check_pid);
-        if let Some(ports) = extract_ports_from_single_process(check_pid) {
-            for port in ports {
+    for &check_pid in &pids_to_check {
+        let inspector_ports = inspector_cache
+            .entry(check_pid)
+            .or_insert_with(|| inspector_ports_from_cmdline(check_pid));
+
+        if let Some(ports) = port_lookup.get(&check_pid) {
+            for &port in ports {
                 if inspector_ports.contains(&port) {
                     continue;
                 }
@@ -66,7 +81,6 @@ pub fn extract_web_server_info(pid: u32) -> Option<String> {
 
     candidates.first().map(|(p, _)| format!(":{p}"))
 }
-
 
 /// Extract port number from lsof output line
 fn extract_port_from_lsof_line(line: &str) -> Option<u16> {
@@ -92,13 +106,10 @@ fn extract_port_from_lsof_line(line: &str) -> Option<u16> {
     None
 }
 
-/// Collect all descendant PIDs (recursive), including the parent
-fn collect_descendant_pids_inclusive(root: u32) -> Vec<u32> {
-    let mut descendants = vec![root];
-    let mut queue = vec![root];
+/// Build a parent -> children process map using `ps`
+fn build_process_children_map() -> HashMap<u32, Vec<u32>> {
+    let mut children_map: HashMap<u32, Vec<u32>> = HashMap::new();
 
-    // Build map from ppid -> Vec<pid>
-    let mut children_map: std::collections::HashMap<u32, Vec<u32>> = std::collections::HashMap::new();
     if let Ok(output) = std::process::Command::new("ps")
         .args(["-o", "pid,ppid", "-A"]) // all processes
         .output()
@@ -107,7 +118,8 @@ fn collect_descendant_pids_inclusive(root: u32) -> Vec<u32> {
             for line in stdout.lines().skip(1) {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 2 {
-                    if let (Ok(pid), Ok(ppid)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    if let (Ok(pid), Ok(ppid)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>())
+                    {
                         children_map.entry(ppid).or_default().push(pid);
                     }
                 }
@@ -115,24 +127,44 @@ fn collect_descendant_pids_inclusive(root: u32) -> Vec<u32> {
         }
     }
 
-    while let Some(ppid) = queue.pop() {
+    children_map
+}
+
+/// Collect all descendant PIDs (recursive), including the parent
+fn collect_descendant_pids(root: u32, children_map: &HashMap<u32, Vec<u32>>) -> Vec<u32> {
+    let mut visited: HashSet<u32> = HashSet::new();
+    let mut queue = VecDeque::new();
+
+    visited.insert(root);
+    queue.push_back(root);
+
+    while let Some(ppid) = queue.pop_front() {
         if let Some(children) = children_map.get(&ppid) {
             for &child in children {
-                if !descendants.contains(&child) {
-                    descendants.push(child);
-                    queue.push(child);
+                if visited.insert(child) {
+                    queue.push_back(child);
                 }
             }
         }
     }
 
-    descendants
+    visited.into_iter().collect()
 }
 
-/// Extract all listening TCP ports for a process
-fn extract_ports_from_single_process(pid: u32) -> Option<Vec<u16>> {
+/// Extract all listening TCP ports for a set of processes using a single `lsof` call
+fn extract_ports_for_processes(pids: &[u32]) -> Option<HashMap<u32, Vec<u16>>> {
+    if pids.is_empty() {
+        return Some(HashMap::new());
+    }
+
+    let pid_arg = pids
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
+
     let output = std::process::Command::new("lsof")
-        .args(["-p", &pid.to_string(), "-iTCP", "-sTCP:LISTEN", "-P", "-n"]) // only TCP LISTEN
+        .args(["-p", &pid_arg, "-iTCP", "-sTCP:LISTEN", "-P", "-n"]) // only TCP LISTEN
         .output()
         .ok()?;
 
@@ -141,18 +173,35 @@ fn extract_ports_from_single_process(pid: u32) -> Option<Vec<u16>> {
     }
 
     let stdout = String::from_utf8(output.stdout).ok()?;
-    let mut ports = Vec::new();
+    let mut map: HashMap<u32, Vec<u16>> = HashMap::new();
     for line in stdout.lines() {
+        if line.starts_with("COMMAND") {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 2 {
+            continue;
+        }
+
+        let pid = match parts[1].parse::<u32>() {
+            Ok(pid) => pid,
+            Err(_) => continue,
+        };
+
         if let Some(port) = extract_port_from_lsof_line(line) {
-            ports.push(port);
+            let entry = map.entry(pid).or_default();
+            if !entry.contains(&port) {
+                entry.push(port);
+            }
         }
     }
-    if ports.is_empty() { None } else { Some(ports) }
+
+    Some(map)
 }
 
 /// Detect inspector/debugger ports from process cmdline
-fn inspector_ports_from_cmdline(pid: u32) -> std::collections::HashSet<u16> {
-    use std::collections::HashSet;
+fn inspector_ports_from_cmdline(pid: u32) -> HashSet<u16> {
     let mut set = HashSet::new();
 
     if let Ok(output) = std::process::Command::new("ps")
@@ -167,14 +216,18 @@ fn inspector_ports_from_cmdline(pid: u32) -> std::collections::HashSet<u16> {
             if let Some(re) = re1.as_ref() {
                 for cap in re.captures_iter(cmdline) {
                     if let Some(m) = cap.get(1) {
-                        if let Ok(p) = m.as_str().parse::<u16>() { set.insert(p); }
+                        if let Ok(p) = m.as_str().parse::<u16>() {
+                            set.insert(p);
+                        }
                     }
                 }
             }
             if let Some(re) = re2.as_ref() {
                 for cap in re.captures_iter(cmdline) {
                     if let Some(m) = cap.get(1) {
-                        if let Ok(p) = m.as_str().parse::<u16>() { set.insert(p); }
+                        if let Ok(p) = m.as_str().parse::<u16>() {
+                            set.insert(p);
+                        }
                     }
                 }
             }
@@ -194,9 +247,7 @@ fn inspector_ports_from_cmdline(pid: u32) -> std::collections::HashSet<u16> {
 /// Try to pick the best candidate port for HTTP dev server
 fn select_best_http_candidate(candidates: &[(u16, u32)]) -> Option<u16> {
     // Add small preference weights for common dev ports without hardcoding a single value
-    const COMMON_DEV_PORTS: &[u16] = &[
-        5173, 3000, 8080, 5174, 4321, 1234, 4000, 8081, 4200, 8000,
-    ];
+    const COMMON_DEV_PORTS: &[u16] = &[5173, 3000, 8080, 5174, 4321, 1234, 4000, 8081, 4200, 8000];
 
     let mut best: Option<(i32, u16)> = None; // (score, port)
 
@@ -227,7 +278,12 @@ fn select_best_http_candidate(candidates: &[(u16, u32)]) -> Option<u16> {
     best.map(|(_, p)| p)
 }
 
-enum HttpProbeResult { Html, Http, OpenButUnknown, Closed }
+enum HttpProbeResult {
+    Html,
+    Http,
+    OpenButUnknown,
+    Closed,
+}
 
 /// Very lightweight HTTP probe: try GET / and read a small prefix
 fn http_probe(port: u16, timeout: std::time::Duration) -> HttpProbeResult {

@@ -3,7 +3,7 @@ use ghost::app::storage::task::Task;
 use ghost::app::storage::task_status::TaskStatus;
 use ghost::app::tui::{App, TaskFilter, ViewMode};
 use pretty_assertions::assert_eq;
-use ratatui::{backend::TestBackend, Terminal};
+use ratatui::{Terminal, backend::TestBackend};
 use std::fs;
 use tempfile::TempDir;
 
@@ -304,9 +304,9 @@ fn test_footer_contains_keybinds() {
 
     // Check that footer contains essential keybinds
     assert!(buffer_output.contains("j/k:Move"));
-    assert!(buffer_output.contains("l/Enter:Log"));
+    assert!(buffer_output.contains("l:Log"));
     assert!(buffer_output.contains("s/C-k:Stop"));
-    assert!(buffer_output.contains("q:Qu"));
+    assert!(buffer_output.contains("q:Quit"));
     assert!(buffer_output.contains("g/G:Top/Bot"));
 }
 
@@ -343,7 +343,7 @@ fn test_task_list_vertical_layout() {
     // Footer block should be separate
     assert!(lines[lines.len() - 3].starts_with("├")); // Footer top border
     assert!(lines[lines.len() - 2].contains("j/k:Move"));
-    assert!(lines[lines.len() - 2].contains("l/Enter:Log"));
+    assert!(lines[lines.len() - 2].contains("l:Log"));
     assert!(lines[lines.len() - 1].starts_with("└")); // Footer bottom border
 }
 
@@ -394,7 +394,7 @@ fn test_table_scroll_functionality() {
     let key_shift_g = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE);
     app.handle_key(key_shift_g).unwrap();
     assert_eq!(app.selected_index(), 19); // Last task
-                                          // Scroll offset should be adjusted to show the selected item
+    // Scroll offset should be adjusted to show the selected item
     assert!(app.table_scroll_offset() > 0);
 
     // Test going to top resets scroll
@@ -537,8 +537,8 @@ fn test_task_filter_cycling_with_tab() {
     app.tasks = tasks;
     app.table_scroll.set_total_items(3);
 
-    // Test initial filter is Running
-    assert_eq!(app.filter, TaskFilter::Running);
+    // Test initial filter is All
+    assert_eq!(app.filter, TaskFilter::All);
 
     // Press Tab to cycle to Running
     let key_tab = KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
