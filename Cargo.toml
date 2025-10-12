@@ -28,4 +28,4 @@ async-trait = "0.1"
 [dev-dependencies]
 tempfile = "3.23"
 pretty_assertions = "1.4"
-regex = "1.11"
+regex = "1.12"
