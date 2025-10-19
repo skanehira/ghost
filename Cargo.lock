@@ -1217,9 +1217,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-transport"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35feabc5e4667019dc262178724c94cbced6f43959af15e214b52f79243f55ed"
+checksum = "8168dcbecc5638f3b43280874f5f2088c41d24650ce894c9165c37a117cbf2f9"
 dependencies = [
  "async-trait",
  "bytes",
