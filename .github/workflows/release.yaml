@@ -59,7 +59,7 @@ jobs:
           echo "ARCHIVE_FILE=$ARCHIVE_FILE" >> $GITHUB_ENV
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ghost_${{ matrix.target }}
           path: ${{ env.ARCHIVE_FILE }}
@@ -73,7 +73,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: ./artifacts
 
