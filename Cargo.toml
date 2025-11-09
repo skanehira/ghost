@@ -19,7 +19,7 @@ futures = "0.3"
 notify = "8.2"
 ratatui = "0.29"
 crossterm = { version = "0.29", features = ["event-stream"] }
-tui-scrollview = "0.5.1"
+tui-scrollview = "0.5.3"
 nix = { version = "0.30", features = ["signal", "process"] }
 rust-mcp-sdk = { version = "0.7", default-features = false, features = ["server","macros","2025_06_18"] }
 rust-mcp-transport = { version = "0.6", default-features = false, features = ["stdio"] }
