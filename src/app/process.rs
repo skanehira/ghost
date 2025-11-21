@@ -79,7 +79,10 @@ pub fn spawn_background_process_with_env(
     }
 
     unsafe {
-        cmd.pre_exec(|| setsid().map(|_| ()).map_err(std::io::Error::other));
+        cmd.pre_exec(|| {
+            setsid()?;
+            Ok(())
+        });
     }
 
     // Spawn the process
