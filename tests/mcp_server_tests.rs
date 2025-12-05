@@ -7,6 +7,7 @@ use ghost::app::storage::{self, Task, TaskStatus};
 use ghost::mcp::GhostServerHandler;
 use rusqlite::Connection;
 use rust_mcp_sdk::McpServer;
+use rust_mcp_sdk::auth::AuthInfo;
 use rust_mcp_sdk::mcp_server::ServerHandler;
 use rust_mcp_sdk::schema::schema_utils::{ClientMessage, MessageFromServer, ServerMessage};
 use rust_mcp_sdk::schema::{
@@ -15,6 +16,7 @@ use rust_mcp_sdk::schema::{
 };
 use serde_json::{Value, json};
 use tempfile::TempDir;
+use tokio::sync::RwLockReadGuard;
 
 struct McpTestContext {
     _temp_dir: TempDir,
@@ -134,6 +136,18 @@ impl McpServer for DummyRuntime {
 
     async fn stderr_message(&self, _message: String) -> rust_mcp_sdk::error::SdkResult<()> {
         Ok(())
+    }
+
+    async fn auth_info(&self) -> RwLockReadGuard<'_, Option<AuthInfo>> {
+        unimplemented!()
+    }
+
+    async fn auth_info_cloned(&self) -> Option<AuthInfo> {
+        unimplemented!()
+    }
+
+    async fn update_auth_info(&self, _auth_info: Option<AuthInfo>) {
+        unimplemented!()
     }
 }
 

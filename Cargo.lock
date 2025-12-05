@@ -1042,9 +1042,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-macros"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b647a85c9da2eaf14e67d39cb067a8157a66bd2c0dc53ef1051a84f45edfae24"
+checksum = "2cd5071387506c57ba93c1b37de7f394aee72ea1f1de74fa86cb2c319527d109"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1065,9 +1065,9 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp-sdk"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0da1520c6524a58f572cefeb92e0d6fff68c47ac3a30c1eab8169df5d270514b"
+checksum = "d30f48ab3339a8effc1c5af176b87eb3297f013afd353628d9088ba42d26fa59"
 dependencies = [
  "async-trait",
  "base64",
