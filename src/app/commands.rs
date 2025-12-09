@@ -259,6 +259,83 @@ fn format_status_list(statuses: &[storage::TaskStatus]) -> String {
         .join(", ")
 }
 
+/// Spawn result for a single command in multi-command execution
+#[derive(Debug)]
+pub struct SpawnResult {
+    /// The original command string
+    pub command_str: String,
+    /// Result of spawning the process
+    pub result: Result<process::ProcessInfo>,
+}
+
+/// Run multiple commands in parallel
+///
+/// Each command string is parsed and spawned as an independent process.
+/// Returns results for all commands, even if some fail.
+pub fn spawn_multi(
+    conn: &Connection,
+    command_strs: Vec<String>,
+    cwd: Option<PathBuf>,
+    env: Vec<String>,
+    show_output: bool,
+) -> Vec<SpawnResult> {
+    let env_vars = match config::env::parse_env_vars(&env) {
+        Ok(vars) => vars,
+        Err(e) => {
+            // If env parsing fails, return error for all commands
+            let error_msg = e.to_string();
+            return command_strs
+                .into_iter()
+                .map(|cmd| SpawnResult {
+                    command_str: cmd,
+                    result: Err(error::GhostError::InvalidArgument {
+                        message: error_msg.clone(),
+                    }),
+                })
+                .collect();
+        }
+    };
+
+    command_strs
+        .into_iter()
+        .map(|command_str| {
+            let result = spawn_single_command(&command_str, cwd.clone(), env_vars.clone(), conn);
+
+            if show_output {
+                match &result {
+                    Ok(info) => {
+                        display::print_process_started(&info.id, info.pid, &info.log_path);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to spawn '{command_str}': {e}");
+                    }
+                }
+            }
+
+            SpawnResult {
+                command_str,
+                result,
+            }
+        })
+        .collect()
+}
+
+/// Spawn a single command from a command string
+fn spawn_single_command(
+    command_str: &str,
+    cwd: Option<PathBuf>,
+    env_vars: Vec<(String, String)>,
+    conn: &Connection,
+) -> Result<process::ProcessInfo> {
+    // Parse the command string into command and arguments
+    let command = helpers::parse_command(command_str)?;
+
+    // Spawn and register the process
+    let (process_info, _) = spawn_and_register_process(command, cwd, env_vars, conn)?;
+
+    Ok(process_info)
+}
+
 /// Start TUI mode
 pub async fn tui() -> Result<()> {
     use crossterm::{
@@ -331,4 +408,87 @@ pub async fn tui() -> Result<()> {
     terminal.show_cursor()?;
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_test_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        storage::database::init_schema(&conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn test_spawn_multi_two_commands() {
+        let conn = setup_test_db();
+        let commands = vec!["sleep 1".to_string(), "echo hello".to_string()];
+
+        let results = spawn_multi(&conn, commands, None, vec![], false);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].result.is_ok());
+        assert!(results[1].result.is_ok());
+
+        // Verify both tasks are in database
+        let tasks = storage::get_tasks_with_process_check(&conn, None).unwrap();
+        assert_eq!(tasks.len(), 2);
+
+        // Clean up: kill spawned processes
+        for result in &results {
+            if let Ok(info) = &result.result {
+                let _ = process::kill(info.pid, true);
+            }
+        }
+    }
+
+    #[test]
+    fn test_spawn_multi_one_fails() {
+        let conn = setup_test_db();
+        // First command is valid, second is empty (will fail to parse)
+        let commands = vec!["sleep 1".to_string(), "".to_string()];
+
+        let results = spawn_multi(&conn, commands, None, vec![], false);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].result.is_ok());
+        assert!(results[1].result.is_err()); // Empty command fails
+
+        // Clean up
+        for result in &results {
+            if let Ok(info) = &result.result {
+                let _ = process::kill(info.pid, true);
+            }
+        }
+    }
+
+    #[test]
+    fn test_spawn_multi_empty_command_fails() {
+        let conn = setup_test_db();
+        let commands = vec!["".to_string()];
+
+        let results = spawn_multi(&conn, commands, None, vec![], false);
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].result.is_err());
+    }
+
+    #[test]
+    fn test_spawn_multi_preserves_command_str() {
+        let conn = setup_test_db();
+        let commands = vec!["sleep 1".to_string(), "echo 'hello world'".to_string()];
+
+        let results = spawn_multi(&conn, commands.clone(), None, vec![], false);
+
+        assert_eq!(results[0].command_str, commands[0]);
+        assert_eq!(results[1].command_str, commands[1]);
+
+        // Clean up
+        for result in &results {
+            if let Ok(info) = &result.result {
+                let _ = process::kill(info.pid, true);
+            }
+        }
+    }
 }

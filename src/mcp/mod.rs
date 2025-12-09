@@ -18,17 +18,16 @@ use rusqlite::Connection;
 
 #[mcp_tool(
     name = "ghost_run",
-    description = "Run a command as a background process managed by ghost"
+    description = "Run one or more commands as background processes managed by ghost"
 )]
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]
 pub struct RunTool {
-    /// Command to run
-    pub command: String,
-    /// Optional command arguments
-    pub args: Option<Vec<String>>,
+    /// Commands to run. Each string is a complete command with arguments.
+    /// Example: ["sleep 10", "echo hello"]
+    pub commands: Vec<String>,
     /// Working directory (defaults to current directory)
     pub cwd: Option<String>,
-    /// Environment variables
+    /// Environment variables (KEY=VALUE format)
     pub env: Option<Vec<String>>,
 }
 
@@ -109,23 +108,47 @@ impl ServerHandler for GhostServerHandler {
 
         match tool {
             GhostTools::RunTool(t) => {
-                let mut command = vec![t.command];
-                if let Some(args) = t.args {
-                    command.extend(args);
+                if t.commands.is_empty() {
+                    return Err(CallToolError::from_message(
+                        "No commands specified".to_string(),
+                    ));
                 }
 
                 let cwd = t.cwd.map(PathBuf::from);
                 let env = t.env.unwrap_or_default();
 
                 let conn = self.conn.lock().unwrap();
-                let process_info = commands::spawn(&conn, command, cwd, env, false)
-                    .map_err(|e| CallToolError::from_message(format!("Failed to run: {e}")))?;
+                let results = commands::spawn_multi(&conn, t.commands, cwd, env, false);
 
-                // Get the task from database to return complete info
-                let task = task_repository::get_task(&conn, &process_info.id)
-                    .map_err(|e| CallToolError::from_message(format!("Failed to get task: {e}")))?;
+                // Collect successful tasks and errors
+                let mut tasks = Vec::new();
+                let mut errors = Vec::new();
 
-                let result = serde_json::to_string_pretty(&task)
+                for spawn_result in results {
+                    match spawn_result.result {
+                        Ok(info) => match task_repository::get_task(&conn, &info.id) {
+                            Ok(task) => tasks.push(task),
+                            Err(e) => errors.push(format!(
+                                "Failed to get task for '{}': {e}",
+                                spawn_result.command_str
+                            )),
+                        },
+                        Err(e) => {
+                            errors.push(format!(
+                                "Failed to spawn '{}': {e}",
+                                spawn_result.command_str
+                            ));
+                        }
+                    }
+                }
+
+                // Build response with tasks and any errors
+                let response = serde_json::json!({
+                    "tasks": tasks,
+                    "errors": errors
+                });
+
+                let result = serde_json::to_string_pretty(&response)
                     .map_err(|e| CallToolError::from_message(format!("JSON error: {e}")))?;
 
                 Ok(CallToolResult::text_content(vec![TextContent::new(

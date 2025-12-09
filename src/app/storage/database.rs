@@ -1,23 +1,8 @@
 use crate::app::error::Result;
 use rusqlite::Connection;
 
-/// Initialize the database and create tables if they don't exist
-pub fn init_database() -> Result<Connection> {
-    init_database_with_config(None)
-}
-
-/// Initialize the database with a specific config
-pub fn init_database_with_config(config: Option<crate::app::config::Config>) -> Result<Connection> {
-    let config = config.unwrap_or_default();
-    config.ensure_directories()?;
-
-    let db_path = config.get_db_path();
-    let conn = Connection::open(db_path)?;
-
-    // Enable WAL mode for better concurrency
-    conn.pragma_update(None, "journal_mode", "WAL")?;
-    conn.pragma_update(None, "synchronous", "NORMAL")?;
-
+/// Initialize schema on an existing connection (for testing)
+pub(crate) fn init_schema(conn: &Connection) -> Result<()> {
     // Create tasks table
     conn.execute(
         r#"
@@ -50,6 +35,28 @@ pub fn init_database_with_config(config: Option<crate::app::config::Config>) -> 
         "CREATE INDEX IF NOT EXISTS idx_tasks_started_at ON tasks(started_at)",
         [],
     )?;
+
+    Ok(())
+}
+
+/// Initialize the database and create tables if they don't exist
+pub fn init_database() -> Result<Connection> {
+    init_database_with_config(None)
+}
+
+/// Initialize the database with a specific config
+pub fn init_database_with_config(config: Option<crate::app::config::Config>) -> Result<Connection> {
+    let config = config.unwrap_or_default();
+    config.ensure_directories()?;
+
+    let db_path = config.get_db_path();
+    let conn = Connection::open(db_path)?;
+
+    // Enable WAL mode for better concurrency
+    conn.pragma_update(None, "journal_mode", "WAL")?;
+    conn.pragma_update(None, "synchronous", "NORMAL")?;
+
+    init_schema(&conn)?;
 
     Ok(conn)
 }

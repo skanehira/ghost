@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
+use rusqlite::Connection;
 use std::path::PathBuf;
 
-use ghost::app::{commands, storage};
+use ghost::app::{commands, error::Result, storage};
 
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
@@ -17,12 +18,17 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Run a command in the background
+    /// Run one or more commands in the background
+    ///
+    /// Single command: ghost run sleep 10
+    /// Multiple commands: ghost run "sleep 10" "echo hello"
     Run {
-        /// The command to run
-        command: Vec<String>,
+        /// Commands to run. For multiple commands, quote each command.
+        /// Example: ghost run "sleep 10" "echo hello"
+        #[arg(required = true)]
+        commands: Vec<String>,
 
-        /// Working directory for the command
+        /// Working directory for the command(s)
         #[arg(short, long)]
         cwd: Option<PathBuf>,
 
@@ -96,9 +102,7 @@ async fn main() {
             // Initialize database connection once for all commands (except TUI)
             match storage::init_database() {
                 Ok(conn) => match cmd {
-                    Commands::Run { command, cwd, env } => {
-                        commands::spawn(&conn, command, cwd, env, true).map(|_| ())
-                    }
+                    Commands::Run { commands, cwd, env } => run_commands(&conn, commands, cwd, env),
                     Commands::List { status } => commands::list(&conn, status, true).map(|_| ()),
                     Commands::Log { task_id, follow } => {
                         commands::log(&conn, &task_id, follow, true)
@@ -132,5 +136,37 @@ async fn main() {
     if let Err(e) = result {
         eprintln!("Error: {e}");
         std::process::exit(1);
+    }
+}
+
+/// Run one or more commands based on the input format
+///
+/// Determines whether to use single-command mode (backward compatible)
+/// or multi-command mode based on whether the first argument contains spaces.
+fn run_commands(
+    conn: &Connection,
+    args: Vec<String>,
+    cwd: Option<PathBuf>,
+    env: Vec<String>,
+) -> Result<()> {
+    if args.is_empty() {
+        return Err(ghost::app::error::GhostError::InvalidArgument {
+            message: "No command specified".to_string(),
+        });
+    }
+
+    // Determine if this is multi-command format:
+    // - If first arg contains space -> multi-command format (each arg is a full command)
+    // - Otherwise -> single-command format (all args form one command)
+    let is_multi_command = args.first().map(|s| s.contains(' ')).unwrap_or(false);
+
+    if is_multi_command {
+        // Multi-command mode: each argument is a complete command string
+        // Note: Error messages are printed by spawn_multi, so we don't need to handle failures here
+        let _ = commands::spawn_multi(conn, args, cwd, env, true);
+        Ok(())
+    } else {
+        // Single-command mode: all arguments form one command (backward compatible)
+        commands::spawn(conn, args, cwd, env, true).map(|_| ())
     }
 }

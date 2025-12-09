@@ -259,6 +259,64 @@ async fn ghost_log_returns_task_log_contents() {
 }
 
 #[tokio::test]
+async fn ghost_run_multiple_commands() {
+    let ctx = McpTestContext::new();
+    let conn = ctx.connection();
+    let handler = GhostServerHandler::new(conn);
+
+    let run_result = call_tool(
+        &handler,
+        "ghost_run",
+        json!({
+            "commands": ["sleep 5", "sleep 5"]
+        }),
+    )
+    .await;
+
+    let run_payload = text_content(&run_result);
+    let response: Value = serde_json::from_str(&run_payload).expect("valid run response JSON");
+    let tasks = response["tasks"].as_array().expect("tasks array");
+    let errors = response["errors"].as_array().expect("errors array");
+
+    assert_eq!(tasks.len(), 2, "should spawn 2 tasks");
+    assert!(errors.is_empty(), "should have no errors");
+
+    // Verify each task has unique ID and correct command
+    let task1: Task = serde_json::from_value(tasks[0].clone()).expect("valid task JSON");
+    let task2: Task = serde_json::from_value(tasks[1].clone()).expect("valid task JSON");
+
+    assert_ne!(task1.id, task2.id, "tasks should have different IDs");
+    assert!(task1.command.contains("sleep"));
+    assert!(task2.command.contains("sleep"));
+
+    // Cleanup: stop running processes (ignore errors for already-exited processes)
+    for task in [&task1, &task2] {
+        let _ = handler
+            .handle_call_tool_request(
+                make_call_request("ghost_stop", json!({ "id": task.id, "force": true })),
+                Arc::new(DummyRuntime::default()),
+            )
+            .await;
+    }
+}
+
+#[tokio::test]
+async fn ghost_run_empty_commands_returns_error() {
+    let ctx = McpTestContext::new();
+    let conn = ctx.connection();
+    let handler = GhostServerHandler::new(conn);
+
+    let result = handler
+        .handle_call_tool_request(
+            make_call_request("ghost_run", json!({ "commands": [] })),
+            Arc::new(DummyRuntime::default()),
+        )
+        .await;
+
+    assert!(result.is_err(), "empty commands should return error");
+}
+
+#[tokio::test]
 async fn ghost_run_and_stop_lifecycle() {
     let ctx = McpTestContext::new();
     let conn = ctx.connection();
@@ -268,15 +326,17 @@ async fn ghost_run_and_stop_lifecycle() {
         &handler,
         "ghost_run",
         json!({
-            "command": "sleep",
-            "args": ["5"],
+            "commands": ["sleep 5"],
             "env": []
         }),
     )
     .await;
 
     let run_payload = text_content(&run_result);
-    let task: Task = serde_json::from_str(&run_payload).expect("valid run task JSON");
+    let response: Value = serde_json::from_str(&run_payload).expect("valid run response JSON");
+    let tasks = response["tasks"].as_array().expect("tasks array");
+    assert_eq!(tasks.len(), 1);
+    let task: Task = serde_json::from_value(tasks[0].clone()).expect("valid task JSON");
     let task_id = task.id.clone();
     assert_eq!(task.status, TaskStatus::Running);
     assert!(task.command.contains("sleep"));
