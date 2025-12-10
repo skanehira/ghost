@@ -1,4 +1,4 @@
-┌ Ghost v0.2.0 [Filter: All] ─────────────────────────────────────────────┐
+┌ Ghost v0.3.0 [Filter: All] ─────────────────────────────────────────────┐
 │ ID      PID     Status  Starte  Command              Directory          │
 │                                                                         │
 │                                                                         │

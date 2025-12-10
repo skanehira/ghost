@@ -1,4 +1,4 @@
-┌ Ghost v0.2.0 [Filter: All] ─────────────────────────────────────────────┐
+┌ Ghost v0.3.0 [Filter: All] ─────────────────────────────────────────────┐
 │ ID       PID      Status    Started            Command                  │
 │ abc1234  12345    running   2024-01-01 11:40   echo hello               │
 │ def6789  67890    exited    2024-01-01 11:10   cargo build              │
