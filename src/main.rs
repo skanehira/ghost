@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use rusqlite::Connection;
 use std::path::PathBuf;
 
-use ghost::app::{commands, error::Result, storage};
+use ghost::app::{commands, config, error::Result, logging, storage};
 
 #[derive(Parser, Debug)]
 #[command(name = "ghost")]
@@ -121,11 +121,17 @@ async fn main() {
                         dry_run,
                         all,
                     } => commands::cleanup(&conn, days, status, dry_run, all),
-                    Commands::Mcp => ghost::mcp::run_stdio_server(conn).await.map_err(|e| {
-                        ghost::app::error::GhostError::Config {
-                            message: e.to_string(),
-                        }
-                    }),
+                    Commands::Mcp => {
+                        // Initialize file logger for MCP server
+                        let log_dir = config::get_log_dir();
+                        let _guard = logging::init_file_logger(&log_dir);
+
+                        ghost::mcp::run_stdio_server(conn).await.map_err(|e| {
+                            ghost::app::error::GhostError::Config {
+                                message: e.to_string(),
+                            }
+                        })
+                    }
                 },
                 Err(e) => Err(e),
             }

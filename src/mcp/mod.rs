@@ -11,6 +11,7 @@ use rust_mcp_transport::{StdioTransport, TransportOptions};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use tracing::{error, info};
 
 use crate::app::commands;
 use crate::app::storage::task_repository;
@@ -213,6 +214,8 @@ impl ServerHandler for GhostServerHandler {
 }
 
 pub async fn run_stdio_server(conn: Connection) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Ghost MCP server starting...");
+
     let server_details = InitializeResult {
         server_info: Implementation {
             name: "ghost-mcp".into(),
@@ -230,9 +233,24 @@ pub async fn run_stdio_server(conn: Connection) -> Result<(), Box<dyn std::error
         protocol_version: LATEST_PROTOCOL_VERSION.into(),
     };
 
-    let transport = StdioTransport::new(TransportOptions::default())?;
+    let transport = match StdioTransport::new(TransportOptions::default()) {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Failed to create transport: {e}");
+            return Err(e.into());
+        }
+    };
+
     let handler = GhostServerHandler::new(conn);
     let server = server_runtime::create_server(server_details, transport, handler);
-    server.start().await?;
+
+    info!("Ghost MCP server initialized, waiting for connections...");
+
+    if let Err(e) = server.start().await {
+        error!("MCP server error: {e}");
+        return Err(e.into());
+    }
+
+    info!("Ghost MCP server shutting down");
     Ok(())
 }

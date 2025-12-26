@@ -24,6 +24,10 @@ nix = { version = "0.30", features = ["signal", "process"] }
 rust-mcp-sdk = { version = "0.7", default-features = false, features = ["server","macros","2025_06_18"] }
 rust-mcp-transport = { version = "0.6", default-features = false, features = ["stdio"] }
 async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+tracing-appender = "0.2"
+tracing-rolling-file = { version = "0.1", features = ["non-blocking"] }
 
 [dev-dependencies]
 tempfile = "3.23"
