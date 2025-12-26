@@ -59,8 +59,12 @@ ghost list
 # Inspect process output
 ghost log -f <task_id>
 
-# Run as a mcp server
+# Run as a MCP server
 ghost mcp
+
+# MCP server logs are written to:
+# Linux: ~/.local/share/ghost/logs/ghost.log
+# macOS: ~/Library/Application Support/ghost/logs/ghost.log
 
 # Open the TUI dashboard
 ghost

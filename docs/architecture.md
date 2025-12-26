@@ -144,6 +144,31 @@ $GHOST_DATA_DIR/
 - Automatic cleanup with task deletion
 - No rotation (kept simple by design)
 
+### MCP Server Logging
+
+When running in MCP server mode (`ghost mcp`), Ghost outputs diagnostic logs to a separate file for debugging connection issues:
+
+```
+$GHOST_DATA_DIR/logs/ghost.log
+```
+
+**Platform-specific locations:**
+- Linux: `~/.local/share/ghost/logs/ghost.log`
+- macOS: `~/Library/Application Support/ghost/logs/ghost.log`
+
+**Log rotation:**
+- Size-based rotation at 5MB
+- Keeps up to 5 historical files (`ghost.log.1`, `ghost.log.2`, etc.)
+- Uses non-blocking async writes for performance
+
+**Logged events:**
+- Server startup
+- Initialization completion
+- Transport/connection errors
+- Server shutdown
+
+This logging is essential for debugging MCP protocol issues since the MCP server uses stdio for communication, making console output unavailable.
+
 ## TUI Architecture
 
 ### Components
